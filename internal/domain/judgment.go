@@ -52,13 +52,26 @@ func CalcSeverity(deviationPercent float64) string {
 }
 
 // CalcDeviation computes the deviation percentage between actual and threshold.
-// For metrics where lower is better (latency), positive deviation = over threshold.
-// For metrics where higher is better (success rate), positive deviation = under threshold.
+// Positive result means violation (actual exceeded threshold for "lower is better" metrics).
 func CalcDeviation(actual, threshold float64) float64 {
 	if threshold == 0 {
 		return 0
 	}
 	return (actual - threshold) / threshold * 100
+}
+
+// CalcUnderDeviation computes deviation for "higher is better" metrics.
+// Positive result means violation (actual fell below threshold).
+// Returns 0 if actual meets or exceeds threshold.
+func CalcUnderDeviation(actual, threshold float64) float64 {
+	if threshold == 0 {
+		return 0
+	}
+	dev := (threshold - actual) / threshold * 100
+	if dev < 0 {
+		return 0 // actual exceeds threshold — no violation
+	}
+	return dev
 }
 
 // EvaluateNfr compares K6Results against NfrConfig and returns deviations.
@@ -93,10 +106,10 @@ func EvaluateNfr(results K6Results, nfr NfrConfig) (Verdict, []NfrDeviation) {
 		}
 	}
 
-	// success rate (higher is better — NEGATIVE deviation = violation)
+	// success rate (higher is better — actual below threshold = violation)
 	if nfr.Reliability.SuccessRatePercent > 0 {
-		dev := CalcDeviation(nfr.Reliability.SuccessRatePercent, results.SuccessRate)
-		if dev > 0 { // threshold > actual = violation
+		dev := CalcUnderDeviation(results.SuccessRate, nfr.Reliability.SuccessRatePercent)
+		if dev > 0 {
 			deviations = append(deviations, NfrDeviation{
 				Metric:    "success_rate_percent",
 				Threshold: nfr.Reliability.SuccessRatePercent,
@@ -107,10 +120,10 @@ func EvaluateNfr(results K6Results, nfr NfrConfig) (Verdict, []NfrDeviation) {
 		}
 	}
 
-	// target RPS (higher is better — NEGATIVE deviation = violation)
+	// target RPS (higher is better — actual below threshold = violation)
 	if nfr.Scalability.TargetRPS > 0 {
-		dev := CalcDeviation(float64(nfr.Scalability.TargetRPS), results.ActualRPS)
-		if dev > 0 { // threshold > actual = violation
+		dev := CalcUnderDeviation(results.ActualRPS, float64(nfr.Scalability.TargetRPS))
+		if dev > 0 {
 			deviations = append(deviations, NfrDeviation{
 				Metric:    "target_rps",
 				Threshold: float64(nfr.Scalability.TargetRPS),

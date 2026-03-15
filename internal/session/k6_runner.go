@@ -77,6 +77,7 @@ func ParseK6Summary(data []byte) (domain.K6Results, error) {
 	}
 
 	var results domain.K6Results
+	errorRateFound := false
 
 	if m, ok := summary.Metrics["http_req_duration"]; ok {
 		if v, ok := m.Values["p(95)"]; ok {
@@ -87,6 +88,7 @@ func ParseK6Summary(data []byte) (domain.K6Results, error) {
 	if m, ok := summary.Metrics["http_req_failed"]; ok {
 		if v, ok := m.Values["rate"]; ok {
 			results.ErrorRatePercent = v * 100
+			errorRateFound = true
 		}
 	}
 
@@ -96,8 +98,13 @@ func ParseK6Summary(data []byte) (domain.K6Results, error) {
 		}
 	}
 
-	// Success rate is derived from error rate
-	results.SuccessRate = 100 - results.ErrorRatePercent
+	// Success rate derived from error rate only when error rate was measured.
+	// For non-HTTP protocols (ws-json-rpc) where http_req_failed is absent,
+	// SuccessRate stays 0 (unmeasured), and NFR evaluation skips it
+	// unless the threshold is explicitly set.
+	if errorRateFound {
+		results.SuccessRate = 100 - results.ErrorRatePercent
+	}
 
 	return results, nil
 }

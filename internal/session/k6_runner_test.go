@@ -60,8 +60,8 @@ func TestParseK6Summary_MissingMetrics(t *testing.T) {
 	if results.ErrorRatePercent != 0 {
 		t.Errorf("ErrorRatePercent = %f, want 0", results.ErrorRatePercent)
 	}
-	if results.SuccessRate != 100 {
-		t.Errorf("SuccessRate = %f, want 100", results.SuccessRate)
+	if results.SuccessRate != 0 {
+		t.Errorf("SuccessRate = %f, want 0 (unmeasured when http_req_failed absent)", results.SuccessRate)
 	}
 	if results.ActualRPS != 0 {
 		t.Errorf("ActualRPS = %f, want 0", results.ActualRPS)
@@ -92,7 +92,7 @@ func TestParseK6Summary_EmptyMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if results.SuccessRate != 100 {
-		t.Errorf("SuccessRate = %f, want 100 (no errors means 100%% success)", results.SuccessRate)
+	if results.SuccessRate != 0 {
+		t.Errorf("SuccessRate = %f, want 0 (unmeasured — no http_req_failed metric)", results.SuccessRate)
 	}
 }
