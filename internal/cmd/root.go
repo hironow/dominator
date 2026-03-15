@@ -91,6 +91,7 @@ func NewRootCommand() *cobra.Command {
 		newGenerateCommand(),
 		newCheckCommand(),
 		newApproveCommand(),
+		newRunCommand(),
 		newConfigCommand(),
 		newDoctorCommand(),
 		newArchivePruneCommand(),
