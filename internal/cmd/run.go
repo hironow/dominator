@@ -67,6 +67,11 @@ Exit codes:
 				return err
 			}
 
+			// Write latest.json for quick access
+			if latestErr := session.WriteLatest(stateDir, judged); latestErr != nil {
+				logger.Warn("Failed to write latest.json: %v", latestErr)
+			}
+
 			// Output JudgedData as JSON to stdout
 			data, marshalErr := json.MarshalIndent(judged, "", "  ")
 			if marshalErr != nil {
