@@ -54,6 +54,14 @@ test:
 test-v:
     go test ./... -count=1 -timeout=300s -v
 
+# Run integration tests
+test-integration:
+    go test -tags integration ./tests/integration/ -count=1 -v -timeout=300s
+
+# Run contract tests
+test-contract:
+    go test -tags contract ./tests/contract/ -count=1 -v -timeout=60s
+
 # Run tests with race detector
 test-race:
     go test ./... -race -count=1 -timeout=300s
