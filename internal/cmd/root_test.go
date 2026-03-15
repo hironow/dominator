@@ -1,0 +1,142 @@
+package cmd_test
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/hironow/dominator/internal/cmd"
+	"github.com/spf13/cobra"
+)
+
+func TestNewRootCommand_HasPersistentFlags(t *testing.T) {
+	// given
+	rootCmd := cmd.NewRootCommand()
+
+	// then
+	for _, name := range []string{"config", "verbose", "lang"} {
+		if rootCmd.PersistentFlags().Lookup(name) == nil {
+			t.Errorf("expected PersistentFlag %q to exist", name)
+		}
+	}
+	// shorthand checks
+	if sh := rootCmd.PersistentFlags().ShorthandLookup("c"); sh == nil || sh.Name != "config" {
+		t.Error("expected -c shorthand for --config")
+	}
+	if sh := rootCmd.PersistentFlags().ShorthandLookup("v"); sh == nil || sh.Name != "verbose" {
+		t.Error("expected -v shorthand for --verbose")
+	}
+	if sh := rootCmd.PersistentFlags().ShorthandLookup("l"); sh == nil || sh.Name != "lang" {
+		t.Error("expected -l shorthand for --lang")
+	}
+}
+
+func TestNewRootCommand_VersionOutput(t *testing.T) {
+	// given
+	origVersion := cmd.Version
+	cmd.Version = "1.2.3"
+	defer func() { cmd.Version = origVersion }()
+	rootCmd := cmd.NewRootCommand()
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"--version"})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := buf.String()
+	if got != "dominator version 1.2.3\n" {
+		t.Errorf("expected 'dominator version 1.2.3\\n', got %q", got)
+	}
+}
+
+func TestNewRootCommand_NoArgsReturnsError(t *testing.T) {
+	// given
+	rootCmd := cmd.NewRootCommand()
+	rootCmd.SetArgs([]string{})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err == nil {
+		t.Fatal("expected error when no subcommand provided, got nil")
+	}
+}
+
+func TestNewRootCommand_NoColorFlag(t *testing.T) {
+	// given
+	rootCmd := cmd.NewRootCommand()
+
+	// when
+	f := rootCmd.PersistentFlags().Lookup("no-color")
+
+	// then
+	if f == nil {
+		t.Fatal("--no-color PersistentFlag not found")
+	}
+	if f.DefValue != "false" {
+		t.Errorf("--no-color default = %q, want %q", f.DefValue, "false")
+	}
+}
+
+func TestRootCmd_OutputFlagExists(t *testing.T) {
+	// given
+	rootCmd := cmd.NewRootCommand()
+
+	// when
+	f := rootCmd.PersistentFlags().Lookup("output")
+
+	// then
+	if f == nil {
+		t.Fatal("--output flag not found")
+	}
+	if f.DefValue != "text" {
+		t.Errorf("default = %q, want text", f.DefValue)
+	}
+	if f.Shorthand != "o" {
+		t.Errorf("shorthand = %q, want o", f.Shorthand)
+	}
+}
+
+func TestSubcommand_ShortAliases(t *testing.T) {
+	root := cmd.NewRootCommand()
+
+	subs := map[string]*cobra.Command{}
+	for _, sub := range root.Commands() {
+		subs[sub.Name()] = sub
+	}
+
+	tests := []struct {
+		subcommand string
+		flag       string
+		shorthand  string
+	}{
+		{"archive-prune", "days", "d"},
+		{"archive-prune", "dry-run", "n"},
+		{"archive-prune", "yes", "y"},
+		{"version", "json", "j"},
+		{"update", "check", "C"},
+		{"doctor", "json", "j"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.subcommand+"/"+tt.flag, func(t *testing.T) {
+			sub, ok := subs[tt.subcommand]
+			if !ok {
+				t.Fatalf("subcommand %q not found", tt.subcommand)
+			}
+			f := sub.Flags().Lookup(tt.flag)
+			if f == nil {
+				t.Fatalf("flag --%s not found on %s", tt.flag, tt.subcommand)
+			}
+			if f.Shorthand != tt.shorthand {
+				t.Errorf("expected shorthand %q for --%s on %s, got %q",
+					tt.shorthand, tt.flag, tt.subcommand, f.Shorthand)
+			}
+		})
+	}
+}

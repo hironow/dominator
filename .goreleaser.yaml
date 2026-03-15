@@ -1,0 +1,97 @@
+version: 2
+
+project_name: dominator
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./... -count=1 -short
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+builds:
+  - main: ./cmd/dominator/
+    binary: dominator
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/hironow/dominator/internal/cmd.Version={{.Version}}
+      - -X github.com/hironow/dominator/internal/cmd.Commit={{.ShortCommit}}
+      - -X github.com/hironow/dominator/internal/cmd.Date={{.CommitDate}}
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}.src"
+
+sboms:
+  - artifacts: archive
+  - id: source
+    artifacts: source
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
+changelog:
+  sort: asc
+  groups:
+    - title: "⚠️ Breaking Changes"
+      regexp: '^.*?!:'
+      order: 0
+    - title: "Features"
+      regexp: '^.*?feat'
+      order: 1
+    - title: "Bug Fixes"
+      regexp: '^.*?fix'
+      order: 2
+    - title: "Other"
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+homebrew_casks:
+  - repository:
+      owner: hironow
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/hironow/dominator"
+    description: "Divergence meter for your codebase"

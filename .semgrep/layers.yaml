@@ -1,0 +1,625 @@
+rules:
+  # ==========================================================================
+  # Layer dependency direction enforcement (CANONICAL — identical across all tools)
+  #
+  # 7-layer architecture:
+  #   internal/cmd              — cobra CLI (top layer)
+  #   internal/usecase          — orchestration (COMMAND, Aggregate, POLICY dispatch)
+  #   internal/usecase/port     — context-aware interface contracts + trivial defaults
+  #   internal/session          — I/O orchestration (filesystem, network, subprocess)
+  #   internal/eventsource      — event store infrastructure
+  #   internal/platform         — cross-cutting infrastructure (logger, telemetry, metrics)
+  #   internal/domain           — pure functions, types, interfaces (no I/O, no context)
+  #
+  # Allowed dependency directions (dependency inversion applied):
+  #   cmd              → usecase, session, usecase/port, platform, domain (composition root)
+  #   usecase          → usecase/port, domain (output port interface only)
+  #   session          → eventsource, usecase/port, platform, domain (adapter implementation)
+  #   eventsource      → domain
+  #   usecase/port     → domain (+ stdlib)
+  #   platform         → domain (+ stdlib)
+  #   domain           → (nothing internal, stdlib only)
+  #
+  # PROHIBITED reverse directions are enforced below.
+  #
+  # Note: cmd → domain is ALLOWED (type/interface references, pure method calls).
+  #       cmd → session is ALLOWED (composition root wiring).
+  #       cmd → eventsource is PROHIBITED (ADR S0008).
+  #       usecase → session is PROHIBITED (must use output port interfaces).
+  #
+  # Ref: Shared ADR S0007 — root-infrastructure-and-layer-conventions
+  #      Shared ADR S0008 — cmd-eventsource-import-prohibition
+  #      Shared ADR S0015 — aggregate-root-and-usecase-layer
+  # ==========================================================================
+
+  # --- Rule 1: Root package must not import internal/ ---
+
+  - id: layer-root-no-import-internal
+    languages: [go]
+    message: |
+      root パッケージから internal/ への import は禁止です。
+      Why: root は doc.go のみで構成され、internal/ への依存は層構造に違反する (hexagonal architecture)
+      How: import 先の型・関数を internal/ 層内で完結させるか、cmd/ に移動してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/.*"
+    paths:
+      include:
+        - "*.go"
+      exclude:
+        - "/internal/**"
+        - "/cmd/**"
+        - "/tests/**"
+
+  # --- Rule 2: Session must not import cmd ---
+
+  - id: layer-session-no-import-cmd
+    languages: [go]
+    message: |
+      session 層から cmd 層への import は禁止です。
+      Why: session は adapter 実装層であり、composition root である cmd に依存すると循環参照を引き起こす (hexagonal architecture)
+      How: session は eventsource, port, platform, domain のみ import してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/cmd"
+    paths:
+      include:
+        - "/internal/session/**"
+
+  # --- Rule 3: Domain must not import upper layers ---
+
+  - id: layer-domain-no-import-upper
+    languages: [go]
+    message: |
+      domain 層から上位層への import は禁止です。
+      Why: domain は pure functions・型のみで構成され、上位層への依存は層構造の根幹を破壊する (hexagonal architecture)
+      How: I/O や context.Context を使う処理は session 層または port 層に移動してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/(session|cmd|eventsource|usecase|platform|port)"
+    paths:
+      include:
+        - "/internal/domain/**"
+
+  # --- Rule 4: Eventsource must not import upper layers ---
+
+  - id: layer-eventsource-no-import-upper
+    languages: [go]
+    message: |
+      eventsource 層から上位層への import は禁止です。
+      Why: eventsource は event persistence adapter であり、domain のみに依存すべきである (event sourcing pattern)
+      How: eventsource → domain のみ許可。上位層のロジックは usecase または session に移動してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/(session|cmd|usecase|port|platform)"
+    paths:
+      include:
+        - "/internal/eventsource/**"
+
+  # --- Rule 5: cmd must not import eventsource (ADR S0008) ---
+
+  - id: s0008-cmd-no-import-eventsource
+    languages: [go]
+    message: |
+      cmd 層から eventsource 層への直接 import は禁止です。
+      Why: cmd → eventsource の直接依存は層のバイパスであり、依存方向 cmd → usecase → session → eventsource に違反する (ADR S0008)
+      How: usecase 層のファクトリ関数を経由してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/eventsource"
+    paths:
+      include:
+        - "/internal/cmd/**"
+
+  # --- Rule 6: usecase must not import cmd (ADR S0015) ---
+
+  - id: layer-usecase-no-import-cmd
+    languages: [go]
+    message: |
+      usecase 層から cmd 層への import は禁止です。
+      Why: usecase はオーケストレーション層であり、composition root である cmd に依存すると循環参照を引き起こす (ADR S0015)
+      How: usecase は usecase/port, domain のみ import してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/cmd"
+    paths:
+      include:
+        - "/internal/usecase/**"
+
+  # --- Rule 7: usecase must not import eventsource directly (ADR S0015) ---
+
+  - id: layer-usecase-no-import-eventsource
+    languages: [go]
+    message: |
+      usecase 層から eventsource 層への直接 import は禁止です。
+      Why: usecase は port interface 経由で I/O を行うべきであり、eventsource への直接依存は dependency inversion に違反する (ADR S0015)
+      How: session 層のファクトリ関数を経由してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/eventsource"
+    paths:
+      include:
+        - "/internal/usecase/**"
+
+  # --- Rule 8: session must not import usecase (ADR S0015) ---
+
+  - id: layer-session-no-import-usecase
+    languages: [go]
+    message: |
+      session 層から usecase 本体への import は禁止です。
+      Why: session は adapter 実装であり、usecase 本体に依存すると hexagonal architecture の port-adapter 境界が崩壊する (ADR S0015)
+      How: session は usecase/port (Output Port) のみ import 可能。eventsource, platform, domain も許可されます
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/usecase(/(?!port).*)?$"
+    paths:
+      include:
+        - "/internal/session/**"
+
+  # --- Rule 9: usecase must not import session (dependency inversion) ---
+
+  - id: layer-usecase-no-import-session
+    languages: [go]
+    message: |
+      usecase 層から session 層への直接 import は禁止です。
+      Why: usecase が session に直接依存すると dependency inversion が崩れ、テスタビリティが失われる (hexagonal architecture)
+      How: usecase/port の Output Port interface を経由し、wiring は cmd (composition root) で行ってください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/session"
+    paths:
+      include:
+        - "/internal/usecase/**"
+      exclude:
+        - "/internal/usecase/port/**"
+        - "*_test.go"
+
+  # --- Rule 10: internal must not import root package ---
+
+  - id: layer-no-root-package-import
+    languages: [go]
+    message: |
+      internal/ から root パッケージへの import は禁止です。
+      Why: root パッケージの型・関数は internal/domain に移動済みであり、逆方向の依存は層構造に違反する
+      How: internal/domain を import してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: "^github\\.com/hironow/dominator$"
+    paths:
+      include:
+        - "/internal/**"
+
+  # --- Rule 11: platform must not import upper layers ---
+
+  - id: layer-platform-no-import-upper
+    languages: [go]
+    message: |
+      platform 層から上位層への import は禁止です。
+      Why: platform は cross-cutting infrastructure（logger, telemetry, metrics）であり、domain のみに依存すべきである (hexagonal architecture)
+      How: platform は domain のみ import してください。上位層のロジックは適切な層に移動してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/(session|cmd|usecase|eventsource|port)"
+    paths:
+      include:
+        - "/internal/platform/**"
+
+  # --- Rule 12: domain must not import stdlib I/O packages ---
+
+  - id: layer-domain-no-stdlib-io
+    languages: [go]
+    message: |
+      domain 層で I/O stdlib パッケージの import は禁止です。
+      Why: domain は pure functions のみで構成され、I/O を含むと副作用が混入しテスタビリティが損なわれる (hexagonal architecture)
+      How: I/O は session 層で行い、context.Context を使う interface は port 層に配置してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: "^(io|os|os/exec|net|net/http|database/sql|context)$"
+    paths:
+      include:
+        - "/internal/domain/**"
+      exclude:
+        - "*_test.go"
+
+  # --- Rule 13a: No direct Linear API access ---
+
+  - id: no-direct-linear-api
+    languages: [go]
+    severity: ERROR
+    pattern-regex: 'api\.linear\.app'
+    message: |
+      Linear API への直接アクセスは禁止です。
+      Why: Linear は MCP 経由で Claude を通じてアクセスする設計であり、直接 API 呼び出しはその境界を迂回する
+      How: MCP 経由で Claude を使用してください
+    paths:
+      include:
+        - "/internal/**"
+      exclude:
+        - "*_test.go"
+
+  # --- Rule 13: port must not import upper layers ---
+
+  - id: layer-port-no-import-upper
+    languages: [go]
+    message: |
+      port 層から上位層への import は禁止です。
+      Why: port は interface 契約のみを定義する層であり、具体実装への依存は dependency inversion に違反する (hexagonal architecture)
+      How: port は domain (+ stdlib: context, errors 等) のみ import し、具体的な I/O 実装は session, platform 層に配置してください
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: ".*/internal/(session|cmd|usecase|eventsource|platform)"
+    paths:
+      include:
+        - "/internal/usecase/port/**"
+
+  # --- Rule 14: No vendor vocabulary in domain ---
+
+  - id: domain-no-vendor-vocabulary
+    languages: [go]
+    severity: ERROR
+    pattern-regex: '(LinearConfig|ClaudeConfig|Wandb|Jaeger)'
+    message: |
+      domain 層に vendor 固有の語彙が含まれています。
+      Why: domain 層は外部サービスに依存しない pure な層であり、vendor 名の混入はその独立性を損なう (hexagonal architecture)
+      How: 汎用的な名前を使用してください（例: IssueTrackerConfig, AIAssistantConfig）
+    paths:
+      include:
+        - "/internal/domain/**"
+      exclude:
+        - "*_test.go"
+        - "/internal/domain/doc.go"
+
+  # --- Rule 15: No direct domain.NewEvent() in session layer ---
+
+  - id: session-no-direct-new-event
+    languages: [go]
+    severity: ERROR
+    patterns:
+      - pattern: domain.NewEvent(...)
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層から domain.NewEvent() の直接呼び出しは禁止です。
+      Why: event 生成は aggregate の責務であり、session が直接生成するとビジネスルールのバイパスが発生する (event sourcing pattern)
+      How: usecase 層の aggregate 経由で event を生成してください
+
+  # --- Rule: No direct aggregate creation in session layer ---
+
+  - id: session-no-direct-new-aggregate
+    languages: [go]
+    severity: ERROR
+    pattern-regex: 'domain\.New\w+Aggregate\('
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層から domain.New*Aggregate() の直接呼び出しは禁止です。
+      Why: aggregate のライフサイクル管理は usecase 層の責務であり、session が直接生成するとオーケストレーションの一貫性が崩れる
+      How: usecase 層で aggregate を生成し、session にはパラメータとして渡してください
+
+  # --- Rule 16: No I/O contract interface in domain layer ---
+
+  - id: domain-no-io-contract-interface
+    languages: [go]
+    severity: ERROR
+    pattern-regex: 'type\s+\w*(Store|Reader|Repository|Recorder|Writer|Gateway)\s+interface'
+    paths:
+      include:
+        - "/internal/domain/**"
+      exclude:
+        - "*_test.go"
+        - "/internal/domain/doc.go"
+    message: |
+      domain 層に I/O 契約 interface の定義は禁止です。
+      Why: domain は pure な型・関数のみで構成され、I/O 契約を含むと domain の独立性が損なわれる (hexagonal architecture)
+      How: I/O 契約 interface は port 層に配置してください
+
+  # --- Rule 17: No shell exec command ---
+
+  - id: no-shell-exec-command
+    languages: [go]
+    severity: ERROR
+    pattern-either:
+      - pattern: exec.Command("sh", "-c", ...)
+      - pattern: exec.Command("bash", "-c", ...)
+      - pattern: exec.CommandContext($CTX, "sh", "-c", ...)
+      - pattern: exec.CommandContext($CTX, "bash", "-c", ...)
+    paths:
+      include:
+        - "/internal/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      shell 経由のコマンド実行は禁止です。
+      Why: shell を介すとインジェクション攻撃のリスクがあり、引数の解釈も不安定になる
+      How: exec.Command で直接実行可能ファイルを指定してください（例: exec.Command("git", "status")）
+
+  # --- Rule 18: No ambiguous type names ---
+
+  - id: no-ambiguous-type-names
+    languages: [go]
+    severity: ERROR
+    pattern-regex: 'type\s+\w*(Manager|Service|Helper|Util|Impl|Base|Facade)\s+'
+    paths:
+      include:
+        - "/internal/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      曖昧な型命名（Manager, Service, Helper, Util, Impl, Base, Facade）は禁止です。
+      Why: 曖昧な名前は責務の肥大化を招き、コードの意図が不明確になる
+      How: 具体的な責務を表す名前を使用してください（例: TaskManager → TaskOrchestrator, ReviewService → ReviewEngine）
+
+  # --- Rule 19: No import of deprecated internal/port ---
+
+  - id: no-import-old-port
+    languages: [go]
+    severity: ERROR
+    pattern-regex: '"[^"]+/internal/port"'
+    paths:
+      include:
+        - "/internal/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      internal/port は廃止済みです。
+      Why: port 層は internal/usecase/port に統合されており、旧パスへの依存は廃止済みコードへの参照となる
+      How: internal/usecase/port を import してください
+
+  # --- Rule 20: Session layer must not reference aggregate types directly ---
+
+  - id: session-no-aggregate-type
+    languages: [go]
+    severity: ERROR
+    pattern-regex: '\*?domain\.\w+Aggregate'
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層で *domain.*Aggregate 型の直接使用は禁止です。
+      Why: session が aggregate 型に直接依存すると、usecase 層の抽象化が無意味になり層境界が崩れる (hexagonal architecture)
+      How: usecase/port の EventEmitter / StateProvider interface を経由してください
+
+  # --- Rule 21: Session layer must not call aggregate methods ---
+
+  - id: session-no-aggregate-method-call
+    languages: [go]
+    severity: ERROR
+    pattern-regex: '\.Aggregate\.\w+\('
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層から aggregate のメソッド直接呼び出しは禁止です。
+      Why: aggregate のメソッドは usecase 層が管理すべきビジネスロジックであり、session からの直接呼び出しは層境界の違反となる
+      How: usecase/port の EventEmitter / StateProvider interface を経由してください
+
+  # --- Rule 22: Domain must not use embed or text/template ---
+
+  - id: domain-no-embed-template
+    languages: [go]
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import "$PKG"
+          - pattern: |
+              import $_ALIAS "$PKG"
+      - metavariable-regex:
+          metavariable: $PKG
+          regex: "^(embed|text/template)$"
+    paths:
+      include:
+        - "/internal/domain/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      domain 層で embed / text/template の import は禁止です。
+      Why: embed はファイルシステム依存、text/template は I/O 寄りの責務であり、pure な domain 層に含めるべきではない
+      How: template 責務は platform 層に配置してください
+
+  # --- Rule: session must not implement event persistence (todo 73) ---
+  - id: layer-session-no-event-persistence
+    languages: [generic]
+    severity: ERROR
+    pattern-regex: '\.jsonl'
+    paths:
+      include:
+        - "/internal/session/"
+      exclude:
+        - "*_test.go"
+        - "**/store_factory.go"
+    message: |
+      session 層で .jsonl ファイル操作は禁止です。
+      Why: event persistence は eventsource 層の専管事項であり、session が直接操作すると責務境界が崩れる (event sourcing pattern)
+      How: event persistence ロジックを internal/eventsource へ移動し、session は store_factory.go 経由で利用してください
+
+  # --- Rule: No Validate() method on domain commands ---
+
+  - id: domain-no-validate-method
+    languages: [go]
+    severity: ERROR
+    pattern-regex: 'func\s+\([^)]+\)\s+Validate\(\)\s+\[\]error'
+    paths:
+      include:
+        - "/internal/domain/**"
+    message: |
+      domain commands に Validate() []error メソッドは禁止です。
+      Why: Parse-Don't-Validate パターンにより always-valid domain model を維持すべきであり、後付けの Validate は不正状態の存在を許容してしまう
+      How: New*() コンストラクタで validated domain primitives を受け取り、Validate() メソッドを削除してください
+
+  # --- Rule: Law of Demeter dot-chain guard ---
+
+  - id: lod-excessive-dot-chain
+    languages: [go]
+    severity: ERROR
+    patterns:
+      - pattern-regex: '\b\w+\.\w+\.\w+\.\w+'
+      - pattern-not-regex: 'attribute\.\w+\("[\w.]+'
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層で 3段以上の dot-chain が検出されました。
+      Why: 過度な dot-chain は Law of Demeter に違反し、内部構造への密結合を引き起こす (Tell-Don't-Ask 原則)
+      How: 中間オブジェクトに委譲メソッドを追加してください。誤検知の場合は nosemgrep を付与してください
+
+  # --- Rule: No hardcoded "claude" literal in exec arguments ---
+
+  - id: config-no-hardcoded-claude-literal
+    languages: [go]
+    severity: ERROR
+    pattern-either:
+      - pattern: exec.Command("claude", ...)
+      - pattern: exec.CommandContext($CTX, "claude", ...)
+      - pattern: append($BINS, "claude")
+    paths:
+      include:
+        - "/internal/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      exec 引数に "claude" リテラルのハードコードは禁止です。
+      Why: 実行可能ファイル名のハードコードは環境差異やテスト時のモック切替を困難にする
+      How: config.ClaudeCmd を使用してください
+
+  # --- Rule: No empty-string fallback in session layer ---
+
+  - id: session-no-empty-string-fallback
+    languages: [go]
+    severity: ERROR
+    patterns:
+      - pattern: |
+          if $VAR == "" {
+              $VAR = $LITERAL
+          }
+      - metavariable-regex:
+          metavariable: $LITERAL
+          regex: '"[^"]+"'
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層での空文字 fallback 代入は禁止です。
+      Why: session 層での fallback は config 設定ミスを隠蔽し、デフォルト値が散在して一貫性が壊れる
+      How: config loading (session/config.go) で空文字チェックを行い、domain.Default* 定数を使用してください
+
+  # --- Rule: No raw .Session. field access (Law of Demeter) ---
+
+  - id: session-no-raw-session-field-access
+    languages: [go]
+    severity: ERROR
+    pattern-regex: '\b\w+\.Session\.\w+'
+    paths:
+      include:
+        - "/internal/session/**"
+      exclude:
+        - "*_test.go"
+    message: |
+      session 層で .Session.Method() の 2-level アクセスが検出されました。
+      Why: Session 構造体への直接アクセスは Law of Demeter に違反し、内部構造への密結合を生む (Tell-Don't-Ask 原則)
+      How: forwarding メソッド経由でアクセスしてください（例: x.Session.Method() → x.method()）

@@ -1,0 +1,145 @@
+rules:
+  # ==========================================================================
+  # cobra / pflag best practices
+  # 5 tools (phonewave, sightjack, paintress, amadeus, dominator) cross-review findings
+  # ==========================================================================
+
+  # --- I/O abstraction rules (cobra testability) ---
+
+  - id: cobra-no-fmt-print-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で fmt.Print/Println/Printf を直接呼ばないでください。
+      Why: テスト時に cmd.SetOut(buf) で出力をキャプチャできなくなります。
+      How: cmd.OutOrStdout() を使って fmt.Fprint/Fprintln/Fprintf に書き換えてください。
+    severity: WARNING
+    pattern-either:
+      - patterns:
+          - pattern: fmt.Print(...)
+          - pattern-inside: |
+              func($CMD *cobra.Command, $ARGS []string) error {
+                ...
+              }
+      - patterns:
+          - pattern: fmt.Println(...)
+          - pattern-inside: |
+              func($CMD *cobra.Command, $ARGS []string) error {
+                ...
+              }
+      - patterns:
+          - pattern: fmt.Printf(...)
+          - pattern-inside: |
+              func($CMD *cobra.Command, $ARGS []string) error {
+                ...
+              }
+
+  - id: cobra-no-os-stdout-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で os.Stdout を直接参照しないでください。
+      Why: テスト時に cmd.SetOut(buf) で出力先を差し替えられなくなります。
+      How: cmd.OutOrStdout() を使用してください。
+    severity: WARNING
+    patterns:
+      - pattern: os.Stdout
+      - pattern-inside: |
+          func($CMD *cobra.Command, $ARGS []string) error {
+            ...
+          }
+
+  - id: cobra-no-os-stderr-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で os.Stderr を直接参照しないでください。
+      Why: テスト時に cmd.SetErr(buf) で stderr 出力をキャプチャできなくなります。
+      How: cmd.ErrOrStderr() を使用してください。
+    severity: ERROR
+    patterns:
+      - pattern: os.Stderr
+      - pattern-inside: |
+          func($CMD *cobra.Command, $ARGS []string) error {
+            ...
+          }
+
+  - id: cobra-no-os-stdin-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で os.Stdin を直接使用しないでください。
+      Why: テスト時に cmd.SetIn(strings.NewReader(...)) で差し替えられなくなります。
+      How: cmd.InOrStdin() を使用してください。
+    severity: WARNING
+    patterns:
+      - pattern: os.Stdin
+      - pattern-inside: |
+          func($CMD *cobra.Command, $ARGS []string) error {
+            ...
+          }
+
+  # --- Context and lifecycle rules ---
+
+  - id: cobra-no-context-background-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で context.Background() を使用しないでください。
+      Why: ExecuteContext() で渡された context のキャンセルシグナルが伝播しなくなります。
+      How: cmd.Context() を使用してください。
+    severity: ERROR
+    patterns:
+      - pattern: context.Background()
+      - pattern-inside: |
+          func($CMD *cobra.Command, $ARGS []string) error {
+            ...
+          }
+
+  - id: cobra-no-os-exit-in-cmd
+    languages: [go]
+    message: |
+      cobra コマンド内で os.Exit() を呼ばないでください。
+      Why: os.Exit は defer を実行せず、cobra のエラーハンドリングをバイパスします。
+      How: error を return して main() で exit code を制御してください。
+    severity: ERROR
+    patterns:
+      - pattern: os.Exit(...)
+      - pattern-inside: |
+          func($CMD *cobra.Command, $ARGS []string) error {
+            ...
+          }
+
+  # --- cobra global state rules ---
+
+  - id: cobra-traverse-hooks-in-init
+    languages: [go]
+    message: |
+      cobra.EnableTraverseRunHooks はグローバル変数です。関数内で設定しないでください。
+      Why: NewRootCommand() 内で設定するとテストで副作用が発生します。
+      How: init() で設定してください。
+    severity: WARNING
+    patterns:
+      - pattern: cobra.EnableTraverseRunHooks = true
+      - pattern-not-inside: |
+          func init() {
+            ...
+          }
+
+  - id: cobra-onfinalize-needs-once
+    languages: [go]
+    message: |
+      cobra.OnFinalize() はグローバルに蓄積されます。
+      Why: NewRootCommand() がテストや docgen で複数回呼ばれるとコールバックが累積します。
+      How: sync.Once で囲んでください。
+    severity: WARNING
+    patterns:
+      - pattern: cobra.OnFinalize(...)
+      - pattern-not-inside: |
+          $ONCE.Do(func() {
+            ...
+          })
+
+  - id: cobra-silence-errors-without-output
+    languages: [go]
+    message: |
+      SilenceErrors: true を設定すると cobra がエラーを表示しなくなります。
+      Why: ユーザーがエラー原因を把握できず、サイレント失敗の原因になります。
+      How: main() で err を os.Stderr に出力するか、SilenceUsage のみ設定してください。
+    severity: ERROR
+    pattern-regex: 'SilenceErrors:\s*true'
