@@ -29,6 +29,7 @@ func (a *ClaudeAdapter) Run(ctx context.Context, prompt string, w io.Writer) (st
 		"-p", prompt,
 	}
 
+	// nosemgrep: lod-excessive-dot-chain -- false positive: dot chain is in nosemgrep rule ID below, not in code [permanent]
 	cmd := exec.CommandContext(ctx, a.ClaudeCmd, args...) // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command -- ClaudeCmd comes from trusted configuration (config.yaml), not user input [permanent]
 	// stdout captures the result, stderr goes to w for progress
 	var stdout strings.Builder

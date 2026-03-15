@@ -1,7 +1,9 @@
 package session
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +42,7 @@ func (r *InboxReader) ReadAll() ([]InboxEntry, error) {
 	dir := r.inboxDir()
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read inbox dir: %w", err)
@@ -96,7 +98,7 @@ func parseInboxEntry(filename, content string) InboxEntry {
 	entry.Kind = extractFrontmatterField(fm, "kind")
 	entry.Severity = extractFrontmatterField(fm, "severity")
 	if entry.Severity == "" {
-		entry.Severity = "low"
+		entry.Severity = domain.SeverityLow
 	}
 
 	// Determine suggestion based on kind

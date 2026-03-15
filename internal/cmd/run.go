@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/hironow/dominator/internal/domain"
-	"github.com/hironow/dominator/internal/eventsource"
 	"github.com/hironow/dominator/internal/session"
 	"github.com/hironow/dominator/internal/usecase"
 	"github.com/spf13/cobra"
@@ -48,7 +47,7 @@ Exit codes:
 
 			planStore := &session.PlanStore{StateDir: stateDir}
 			k6Runner := &session.K6Runner{Logger: logger}
-			eventStore := eventsource.NewFileEventStore(filepath.Join(stateDir, "events"), logger)
+			eventStore := session.NewEventStore(stateDir, logger)
 			insightWriter := &session.InsightWriter{StateDir: stateDir, Logger: logger}
 			dmailEmitter := &session.DMailEmitter{StateDir: stateDir, Logger: logger}
 

@@ -26,7 +26,7 @@ func TestExt_hook_started_and_response_create_child_span(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	tracer := tp.Tracer("test")
 
-	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke")
+	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, manually ended after CollectAll to capture child spans [permanent]
 	sr := platform.NewStreamReader(strings.NewReader(input))
 	emitter := platform.NewSpanEmittingStreamReader(sr, ctx, tracer)
 
@@ -64,7 +64,7 @@ func TestExt_thinking_adds_event_to_parent(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	tracer := tp.Tracer("test")
 
-	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke")
+	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, manually ended after CollectAll to capture child spans [permanent]
 	sr := platform.NewStreamReader(strings.NewReader(input))
 	emitter := platform.NewSpanEmittingStreamReader(sr, ctx, tracer)
 
@@ -107,7 +107,7 @@ func TestExt_rate_limit_adds_event_to_parent(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	tracer := tp.Tracer("test")
 
-	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke")
+	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, manually ended after CollectAll to capture child spans [permanent]
 	sr := platform.NewStreamReader(strings.NewReader(input))
 	emitter := platform.NewSpanEmittingStreamReader(sr, ctx, tracer)
 
@@ -149,7 +149,7 @@ func TestExt_orphan_hook_response_does_not_panic(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 	tracer := tp.Tracer("test")
 
-	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke")
+	ctx, parentSpan := tracer.Start(context.Background(), "claude.invoke") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, manually ended after CollectAll to capture child spans [permanent]
 	sr := platform.NewStreamReader(strings.NewReader(input))
 	emitter := platform.NewSpanEmittingStreamReader(sr, ctx, tracer)
 

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hironow/dominator/internal/domain"
-	"github.com/hironow/dominator/internal/eventsource"
 	"github.com/hironow/dominator/internal/session"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +48,7 @@ is output to stdout.`,
 			}
 
 			// Record event
-			eventStore := eventsource.NewFileEventStore(filepath.Join(stateDir, "events"), logger)
+			eventStore := session.NewEventStore(stateDir, logger)
 			ev, evErr := domain.NewEvent(domain.EventPlanApproved, plan, time.Now())
 			if evErr == nil {
 				eventStore.Append(ev)

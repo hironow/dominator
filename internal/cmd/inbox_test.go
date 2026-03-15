@@ -3,6 +3,8 @@ package cmd_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,7 +151,7 @@ Some feedback content here.
 	}
 	// Verify original file was removed
 	origPath := filepath.Join(inboxDir, "impl-feedback-20260101.md")
-	if _, err := os.Stat(origPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(origPath); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("expected original D-Mail to be removed from inbox")
 	}
 }

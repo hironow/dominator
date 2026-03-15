@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/hironow/dominator/internal/domain"
-	"github.com/hironow/dominator/internal/eventsource"
 	"github.com/hironow/dominator/internal/session"
 	"github.com/hironow/dominator/internal/usecase"
 	"github.com/spf13/cobra"
@@ -42,7 +41,7 @@ output to stdout for piping to other tools.`,
 
 			planStore := &session.PlanStore{StateDir: stateDir}
 			configLoader := &session.FileConfigLoader{}
-			eventStore := eventsource.NewFileEventStore(filepath.Join(stateDir, "events"), logger)
+			eventStore := session.NewEventStore(stateDir, logger)
 
 			plan, err := usecase.RunCheck(
 				cmd.Context(),

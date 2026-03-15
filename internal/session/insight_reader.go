@@ -2,7 +2,9 @@ package session
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +42,7 @@ func (r *InsightReader) ReadHue() ([]HueEntry, error) {
 	path := filepath.Join(r.insightsDir(), "hue.md")
 	content, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read hue.md: %w", err)
@@ -54,7 +56,7 @@ func (r *InsightReader) ReadCoefficient() ([]CoefficientEntry, error) {
 	path := filepath.Join(r.insightsDir(), "coefficient.md")
 	content, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read coefficient.md: %w", err)

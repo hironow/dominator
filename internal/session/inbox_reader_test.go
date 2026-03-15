@@ -1,6 +1,8 @@
 package session_test
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -149,7 +151,7 @@ func TestInboxReader_Archive_MovesFile(t *testing.T) {
 	}
 
 	// Original should be gone
-	if _, err := os.Stat(filepath.Join(inboxDir, filename)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(inboxDir, filename)); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("expected original file to be removed from inbox")
 	}
 

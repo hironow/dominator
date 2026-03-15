@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/hironow/dominator/internal/domain"
-	"github.com/hironow/dominator/internal/eventsource"
 	"github.com/hironow/dominator/internal/session"
 	"github.com/hironow/dominator/internal/usecase"
 	"github.com/spf13/cobra"
@@ -113,7 +112,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		TimeoutSec: cfg.TimeoutSec,
 		Logger:     logger,
 	}
-	eventStore := eventsource.NewFileEventStore(filepath.Join(stateDir, "events"), logger)
+	eventStore := session.NewEventStore(stateDir, logger)
 	scriptWriter := &session.K6ScriptWriter{
 		StateDir: stateDir,
 		Logger:   logger,

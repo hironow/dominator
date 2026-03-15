@@ -161,25 +161,29 @@ func setConfigField(cfg *domain.Config, key, value string) error {
 		if err != nil {
 			return fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		cfg.Nfr.Performance.P95LatencyMs = v
+		perf := &cfg.Nfr.Performance
+		perf.P95LatencyMs = v
 	case "nfr.performance.error_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		cfg.Nfr.Performance.ErrorRatePercent = v
+		perf := &cfg.Nfr.Performance
+		perf.ErrorRatePercent = v
 	case "nfr.reliability.success_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		cfg.Nfr.Reliability.SuccessRatePercent = v
+		rel := &cfg.Nfr.Reliability
+		rel.SuccessRatePercent = v
 	case "nfr.scalability.target_rps":
 		v, err := strconv.Atoi(value)
 		if err != nil {
 			return fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		cfg.Nfr.Scalability.TargetRPS = v
+		scal := &cfg.Nfr.Scalability
+		scal.TargetRPS = v
 	case "load.vus":
 		v, err := strconv.Atoi(value)
 		if err != nil {
