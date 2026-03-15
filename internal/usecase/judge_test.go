@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/usecase"
@@ -39,6 +40,14 @@ type fakeEventStore struct {
 func (f *fakeEventStore) Append(events ...domain.Event) (domain.AppendResult, error) {
 	f.events = append(f.events, events...)
 	return domain.AppendResult{BytesWritten: 1}, nil
+}
+
+func (f *fakeEventStore) LoadAll() ([]domain.Event, domain.LoadResult, error) {
+	return f.events, domain.LoadResult{}, nil
+}
+
+func (f *fakeEventStore) LoadSince(_ time.Time) ([]domain.Event, domain.LoadResult, error) {
+	return f.events, domain.LoadResult{}, nil
 }
 
 type fakeInsightWriter struct {

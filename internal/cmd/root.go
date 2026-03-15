@@ -100,6 +100,7 @@ func NewRootCommand() *cobra.Command {
 		newUpdateCmd(),
 		newInsightsCommand(),
 		newInboxCommand(),
+		newStatusCommand(),
 	)
 
 	return cmd

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/usecase"
@@ -38,6 +39,14 @@ type recordingEventStore struct {
 func (r *recordingEventStore) Append(events ...domain.Event) (domain.AppendResult, error) {
 	r.events = append(r.events, events...)
 	return domain.AppendResult{BytesWritten: 0}, nil
+}
+
+func (r *recordingEventStore) LoadAll() ([]domain.Event, domain.LoadResult, error) {
+	return r.events, domain.LoadResult{}, nil
+}
+
+func (r *recordingEventStore) LoadSince(_ time.Time) ([]domain.Event, domain.LoadResult, error) {
+	return r.events, domain.LoadResult{}, nil
 }
 
 type stubScriptWriter struct {
