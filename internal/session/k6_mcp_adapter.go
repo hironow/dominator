@@ -189,12 +189,26 @@ func extractJSONFromText(text string) []byte {
 
 // parseK6MCPRunResult extracts K6Results from mcp-k6 run_script response.
 // Handles both the mcp-k6 wrapper format and raw k6 summary format.
+// Returns error if the run itself failed (success=false or non-zero exit code).
 func parseK6MCPRunResult(data []byte) (domain.K6Results, error) {
 	// Try mcp-k6 run_script format first: {success, metrics, ...}
 	var runResult mcpK6RunResult
-	if err := json.Unmarshal(data, &runResult); err == nil && runResult.Metrics != nil {
-		// mcp-k6 wraps k6 metrics — parse the inner metrics
-		return ParseK6Summary([]byte(fmt.Sprintf(`{"metrics":%s}`, string(runResult.Metrics))))
+	if err := json.Unmarshal(data, &runResult); err == nil {
+		// Check for run failure before parsing metrics
+		if !runResult.Success {
+			errMsg := runResult.Error
+			if errMsg == "" {
+				errMsg = runResult.Stderr
+			}
+			if errMsg == "" {
+				errMsg = fmt.Sprintf("k6 run failed with exit code %d", runResult.ExitCode)
+			}
+			return domain.K6Results{}, fmt.Errorf("mcp-k6 run_script failed: %s", errMsg)
+		}
+		if runResult.Metrics != nil {
+			return ParseK6Summary(fmt.Appendf(nil, `{"metrics":%s}`, string(runResult.Metrics)))
+		}
+		// success=true but no metrics — fall through to raw format
 	}
 
 	// Fall back to raw k6 summary format: {metrics: {http_req_duration: ...}}
@@ -223,8 +237,11 @@ type mcpK6RunResult struct {
 
 // checkValidationResult checks stream-json output for validation errors.
 // Parses mcp-k6 validate_script response: {valid, exit_code, stderr, error}.
+// Returns error if validation failed OR if no explicit validation result was found
+// (fail-closed: absence of proof of validity is treated as invalid).
 func checkValidationResult(data []byte) error {
 	reader := platform.NewStreamReader(bytes.NewReader(data))
+	foundValidResult := false
 
 	for {
 		msg, err := reader.Next()
@@ -243,11 +260,11 @@ func checkValidationResult(data []byte) error {
 			if resultJSON != nil {
 				var vr mcpK6ValidateResult
 				if json.Unmarshal(resultJSON, &vr) == nil {
+					foundValidResult = true
 					if !vr.Valid {
-						errMsg := validationErrorMessage(vr)
-						return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, errMsg)
+						return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, validationErrorMessage(vr))
 					}
-					return nil // valid
+					return nil // explicitly valid
 				}
 			}
 		}
@@ -261,12 +278,21 @@ func checkValidationResult(data []byte) error {
 			for _, block := range am.Content {
 				if block.Type == "tool_result" && len(block.Input) > 0 {
 					var vr mcpK6ValidateResult
-					if json.Unmarshal(block.Input, &vr) == nil && !vr.Valid {
-						return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, validationErrorMessage(vr))
+					if json.Unmarshal(block.Input, &vr) == nil {
+						foundValidResult = true
+						if !vr.Valid {
+							return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, validationErrorMessage(vr))
+						}
+						return nil // explicitly valid
 					}
 				}
 			}
 		}
+	}
+
+	// Fail-closed: if no structured validation result was found, treat as error
+	if !foundValidResult {
+		return fmt.Errorf("k6 script validation inconclusive: no validate_script result found in Claude Code output (is mcp-k6 configured?)")
 	}
 
 	return nil
