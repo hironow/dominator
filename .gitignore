@@ -19,3 +19,4 @@ dominator
 .pass/inbox/
 .pass/outbox/
 .pass/archive/
+/dist/
