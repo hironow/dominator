@@ -32,5 +32,6 @@ dominator [flags]
 * [dominator run](dominator_run.md)	 - Execute k6 load test and judge NFR compliance
 * [dominator status](dominator_status.md)	 - Show dominator operational status
 * [dominator update](dominator_update.md)	 - Self-update dominator to the latest release
+* [dominator validate](dominator_validate.md)	 - Validate k6 scripts via mcp-k6
 * [dominator version](dominator_version.md)	 - Print version, commit, and build information
 
