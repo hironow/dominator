@@ -21,13 +21,15 @@ func ExitCode(err error) int {
 	return 1
 }
 
-// IndexEntry holds metadata about an archived D-Mail for the archive index.
+// IndexEntry represents one line in the archive index JSONL file.
 type IndexEntry struct {
-	Name    string `json:"name"`
-	Kind    string `json:"kind"`
-	Tool    string `json:"tool"`
-	ModTime string `json:"mod_time"`
-	Summary string `json:"summary,omitempty"`
+	Timestamp string `json:"ts"`
+	Operation string `json:"op"`
+	Issue     string `json:"issue"`
+	Status    string `json:"status"`
+	Tool      string `json:"tool"`
+	Path      string `json:"path"`
+	Summary   string `json:"summary"`
 }
 
 // shutdownKey is the context key for the outer (shutdown) context.
