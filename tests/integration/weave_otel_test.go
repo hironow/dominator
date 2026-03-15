@@ -37,7 +37,7 @@ func TestWeaveOTLP_HeadersAndResourceAttributes(t *testing.T) {
 	received := make(chan struct{}, 10)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
+		mu.Lock() // nosemgrep: adr0005-mutex-lock-without-defer-unlock -- httptest handler scope, unlock is immediate [permanent]
 		capturedHeaders = r.Header.Clone()
 		requestCount++
 		mu.Unlock()
@@ -78,7 +78,7 @@ func TestWeaveOTLP_HeadersAndResourceAttributes(t *testing.T) {
 	)
 
 	tracer := tp.Tracer("dominator")
-	_, span := tracer.Start(ctx, "test-weave-verification")
+	_, span := tracer.Start(ctx, "test-weave-verification") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, ended explicitly below [permanent]
 	span.End()
 
 	if err := tp.Shutdown(ctx); err != nil {
@@ -127,7 +127,7 @@ func TestOTelTracerInitialization(t *testing.T) {
 	tracer := tp.Tracer("dominator-test")
 
 	// when: create and end a span
-	_, span := tracer.Start(ctx, "test-span")
+	_, span := tracer.Start(ctx, "test-span") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, ended explicitly below [permanent]
 	span.End()
 
 	// then: no panics, no errors (noop behavior)
@@ -156,7 +156,7 @@ func TestOTelNoopDefault(t *testing.T) {
 	defer tp.Shutdown(ctx)
 
 	tracer := tp.Tracer("dominator-test")
-	_, span := tracer.Start(ctx, "should-not-export")
+	_, span := tracer.Start(ctx, "should-not-export") // nosemgrep: adr0003-otel-span-without-defer-end -- test span, ended explicitly below [permanent]
 	span.End()
 
 	tp.Shutdown(ctx)
