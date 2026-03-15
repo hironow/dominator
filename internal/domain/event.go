@@ -80,3 +80,14 @@ type GenerationFailedData struct {
 	SpecURL string `json:"spec_url"`
 	Reason  string `json:"reason"`
 }
+
+// AppendResult captures metrics from an event store Append operation.
+type AppendResult struct {
+	BytesWritten int // total bytes written to event files
+}
+
+// LoadResult captures metrics from an event store Load operation.
+type LoadResult struct {
+	FileCount        int // number of .jsonl files scanned
+	CorruptLineCount int // number of lines skipped due to parse errors
+}
