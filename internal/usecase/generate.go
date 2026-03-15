@@ -78,7 +78,65 @@ func RunGenerate(
 }
 
 func buildK6Prompt(specContent, protocol string) string {
-	return fmt.Sprintf(`You are a k6 load testing expert. Generate a k6 load test script for the following %s API specification.
+	return buildK6PromptForProtocol(specContent, protocol)
+}
+
+// buildK6PromptForProtocol returns a protocol-specific prompt for k6 script generation.
+func buildK6PromptForProtocol(specOrDocs, protocol string) string {
+	switch protocol {
+	case "json-rpc":
+		return fmt.Sprintf(`You are a k6 load testing expert. Generate a k6 load test script for the following JSON-RPC API specification.
+
+Requirements:
+- Use k6 JavaScript/TypeScript syntax
+- Include proper imports (import http from 'k6/http', import { check, sleep } from 'k6')
+- Define reasonable default options (vus: 10, duration: '30s')
+- All requests should be HTTP POST to the JSON-RPC endpoint
+- Use proper JSON-RPC 2.0 request format: {"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}
+- Test all methods defined in the spec
+- Validate JSON-RPC response structure (check for result/error fields)
+- Add appropriate sleep between requests
+- Output ONLY the k6 script code, no explanations
+
+API Specification:
+%s`, specOrDocs)
+
+	case "ws-json-rpc":
+		return fmt.Sprintf(`You are a k6 load testing expert. Generate a k6 load test script for the following WebSocket JSON-RPC API specification.
+
+Requirements:
+- Use k6 JavaScript/TypeScript syntax
+- Include proper imports (import ws from 'k6/ws', import { check } from 'k6')
+- Define reasonable default options (vus: 10, duration: '30s')
+- Use the k6/ws module to establish WebSocket connections
+- Send JSON-RPC 2.0 messages over WebSocket: {"jsonrpc": "2.0", "method": "...", "params": {...}, "id": N}
+- Handle WebSocket events (open, message, close, error)
+- Validate JSON-RPC response structure in message handlers
+- Test all methods defined in the spec
+- Output ONLY the k6 script code, no explanations
+
+API Specification:
+%s`, specOrDocs)
+
+	case "http":
+		return fmt.Sprintf(`You are a k6 load testing expert. Generate a k6 load test script based on the following HTTP API documentation.
+
+Requirements:
+- Use k6 JavaScript/TypeScript syntax
+- Include proper imports (import http from 'k6/http', import { check, sleep } from 'k6')
+- Define reasonable default options (vus: 10, duration: '30s')
+- Infer API endpoints, methods, and expected responses from the documentation
+- Test all discoverable endpoints
+- Include response status checks
+- Add appropriate sleep between requests
+- Handle common HTTP methods (GET, POST, PUT, DELETE) as described in the docs
+- Output ONLY the k6 script code, no explanations
+
+API Documentation:
+%s`, specOrDocs)
+
+	default: // openapi
+		return fmt.Sprintf(`You are a k6 load testing expert. Generate a k6 load test script for the following %s API specification.
 
 Requirements:
 - Use k6 JavaScript/TypeScript syntax
@@ -90,7 +148,8 @@ Requirements:
 - Output ONLY the k6 script code, no explanations
 
 API Specification:
-%s`, protocol, specContent)
+%s`, protocol, specOrDocs)
+	}
 }
 
 func extractScriptContent(claudeOutput string) string {

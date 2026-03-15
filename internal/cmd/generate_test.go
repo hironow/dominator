@@ -30,8 +30,15 @@ func TestGenerateCmd_SubcommandExists(t *testing.T) {
 	}
 }
 
-func TestGenerateCmd_SpecFlagRequired(t *testing.T) {
-	// given
+func TestGenerateCmd_SpecRequiredForOpenAPI(t *testing.T) {
+	// given: directory with .pass/
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	if err := os.MkdirAll(passDir, 0o755); err != nil {
+		t.Fatalf("create pass dir: %v", err)
+	}
+	t.Chdir(dir)
+
 	rootCmd := cmd.NewRootCommand()
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -152,5 +159,85 @@ func TestGenerateCmd_FailsWithInvalidProtocol(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid protocol") {
 		t.Errorf("expected 'invalid protocol' in error, got: %v", err)
+	}
+}
+
+func TestGenerateCmd_DocsFlagExists(t *testing.T) {
+	// given
+	rootCmd := cmd.NewRootCommand()
+
+	// when
+	var genCmd *cobra.Command
+	for _, sub := range rootCmd.Commands() {
+		if sub.Name() == "generate" {
+			genCmd = sub
+			break
+		}
+	}
+	if genCmd == nil {
+		t.Fatal("generate subcommand not found")
+	}
+
+	// then
+	f := genCmd.Flags().Lookup("docs")
+	if f == nil {
+		t.Fatal("--docs flag not found")
+	}
+	if f.DefValue != "" {
+		t.Errorf("--docs default = %q, want empty string", f.DefValue)
+	}
+}
+
+func TestGenerateCmd_HttpRequiresDocs(t *testing.T) {
+	// given: directory with .pass/
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	if err := os.MkdirAll(passDir, 0o755); err != nil {
+		t.Fatalf("create pass dir: %v", err)
+	}
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"generate", "-p", "http"})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err == nil {
+		t.Fatal("expected error for http without --docs, got nil")
+	}
+	if !strings.Contains(err.Error(), "--docs is required") {
+		t.Errorf("expected '--docs is required' in error, got: %v", err)
+	}
+}
+
+func TestGenerateCmd_HttpRejectsSpec(t *testing.T) {
+	// given: directory with .pass/
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	if err := os.MkdirAll(passDir, 0o755); err != nil {
+		t.Fatalf("create pass dir: %v", err)
+	}
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"generate", "-p", "http", "--spec", "https://example.com/spec.json", "--docs", "https://example.com/docs"})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err == nil {
+		t.Fatal("expected error for http with --spec, got nil")
+	}
+	if !strings.Contains(err.Error(), "--spec must not be set") {
+		t.Errorf("expected '--spec must not be set' in error, got: %v", err)
 	}
 }

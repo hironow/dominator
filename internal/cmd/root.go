@@ -98,6 +98,8 @@ func NewRootCommand() *cobra.Command {
 		newCleanCommand(),
 		newVersionCommand(),
 		newUpdateCmd(),
+		newInsightsCommand(),
+		newInboxCommand(),
 	)
 
 	return cmd
