@@ -79,6 +79,21 @@ func ValidLang(lang string) bool {
 	return lang == "ja" || lang == "en"
 }
 
+// Days is an always-valid retention period in days (positive integer).
+type Days struct{ v int }
+
+// NewDays parses an integer into a Days primitive.
+// Returns an error if the value is not positive.
+func NewDays(n int) (Days, error) {
+	if n <= 0 {
+		return Days{}, fmt.Errorf("days must be positive (got %d)", n)
+	}
+	return Days{v: n}, nil
+}
+
+// Int returns the underlying integer value.
+func (d Days) Int() int { return d.v }
+
 // ProjectConfigPath returns the full path to the config file within a repo.
 func ProjectConfigPath(repoPath RepoPath) string {
 	return repoPath.String() + "/" + StateDir + "/" + ConfigFile
