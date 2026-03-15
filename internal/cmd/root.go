@@ -92,6 +92,7 @@ func NewRootCommand() *cobra.Command {
 		newCheckCommand(),
 		newApproveCommand(),
 		newRunCommand(),
+		newValidateCommand(),
 		newConfigCommand(),
 		newDoctorCommand(),
 		newArchivePruneCommand(),

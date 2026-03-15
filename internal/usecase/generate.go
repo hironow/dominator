@@ -78,7 +78,8 @@ func RunGenerate(
 }
 
 func buildK6Prompt(specContent, protocol string) string {
-	return buildK6PromptForProtocol(specContent, protocol)
+	base := buildK6PromptForProtocol(specContent, protocol)
+	return buildK6PromptWithMCPK6(base)
 }
 
 // buildK6PromptForProtocol returns a protocol-specific prompt for k6 script generation.
@@ -150,6 +151,17 @@ Requirements:
 API Specification:
 %s`, protocol, specOrDocs)
 	}
+}
+
+// buildK6PromptWithMCPK6 wraps a k6 generation prompt with mcp-k6 tool instructions.
+// It instructs Claude Code to use mcp-k6's get_documentation tool before writing
+// the script and validate_script tool after generating it.
+func buildK6PromptWithMCPK6(basePrompt string) string {
+	return fmt.Sprintf(`Before writing the script, use the mcp-k6 get_documentation tool to look up relevant k6 API documentation for the modules you will use.
+
+%s
+
+After generating the script, use the mcp-k6 validate_script tool to verify the generated script is valid k6 code. If validation fails, fix the issues and validate again.`, basePrompt)
 }
 
 func extractScriptContent(claudeOutput string) string {

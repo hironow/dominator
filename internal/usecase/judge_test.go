@@ -33,6 +33,10 @@ func (f *fakeK6Runner) Run(_ context.Context, _ string, _ domain.LoadConfig, _ i
 	return f.results, f.err
 }
 
+func (f *fakeK6Runner) Validate(_ context.Context, _ string) error {
+	return nil
+}
+
 type fakeEventStore struct {
 	events []domain.Event
 }

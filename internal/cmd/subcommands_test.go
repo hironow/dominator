@@ -22,7 +22,7 @@ func TestAllSubcommands_Exist(t *testing.T) {
 
 	expected := []string{
 		"init", "generate", "check", "approve", "run",
-		"status", "insights", "inbox", "config", "clean",
+		"validate", "status", "insights", "inbox", "config", "clean",
 		"doctor", "version", "update", "archive-prune",
 	}
 	for _, name := range expected {

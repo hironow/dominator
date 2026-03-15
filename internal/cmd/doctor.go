@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -68,8 +67,18 @@ SKIP (dependency missing), WARN (advisory, exit 0).`,
 func runDoctor(configPath string, repoRoot string, logger domain.Logger, repair bool) []domain.DoctorCheck {
 	var results []domain.DoctorCheck
 
-	// Check k6 binary
-	results = append(results, checkTool("k6"))
+	// Check mcp-k6 availability via Claude Code
+	cfg, cfgErr := session.LoadConfig(configPath)
+	if cfgErr != nil {
+		results = append(results, domain.DoctorCheck{
+			Name:    "mcp-k6",
+			Status:  domain.CheckSkip,
+			Message: "could not load config to check mcp-k6",
+			Hint:    "run 'dominator init' first",
+		})
+	} else {
+		results = append(results, session.CheckMCPK6(cfg.ClaudeCmd, cfg.Model, logger))
+	}
 
 	// Check state dir
 	results = append(results, session.CheckStateDir(repoRoot, repair))
@@ -78,24 +87,6 @@ func runDoctor(configPath string, repoRoot string, logger domain.Logger, repair 
 	results = append(results, session.CheckConfig(configPath))
 
 	return results
-}
-
-// checkTool verifies that a binary is available in PATH.
-func checkTool(name string) domain.DoctorCheck {
-	_, err := exec.LookPath(name)
-	if err != nil {
-		return domain.DoctorCheck{
-			Name:    name,
-			Status:  domain.CheckFail,
-			Message: fmt.Sprintf("%s not found in PATH", name),
-			Hint:    fmt.Sprintf("install %s and ensure it is in PATH", name),
-		}
-	}
-	return domain.DoctorCheck{
-		Name:    name,
-		Status:  domain.CheckOK,
-		Message: fmt.Sprintf("%s found", name),
-	}
 }
 
 type jsonCheck struct {
