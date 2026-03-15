@@ -16,6 +16,13 @@ type EventType string
 const (
 	EventScriptGenerated  EventType = "script.generated"
 	EventGenerationFailed EventType = "generation.failed"
+
+	// Phase 2: check/approve/run events.
+	EventPlanCreated       EventType = "plan.created"
+	EventPlanApproved      EventType = "plan.approved"
+	EventJudged            EventType = "judged"
+	EventViolationDetected EventType = "violation.detected"
+	EventPassConfirmed     EventType = "pass.confirmed"
 )
 
 // Event is the envelope for all domain events in the event store.
