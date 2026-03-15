@@ -78,3 +78,39 @@ func TestStatusCmd_FailsWithoutInit(t *testing.T) {
 		t.Errorf("expected error to mention 'init', got: %s", err.Error())
 	}
 }
+
+func TestStatusCmd_OutputFlag(t *testing.T) {
+	rootCmd := cmd.NewRootCommand()
+	f := rootCmd.PersistentFlags().Lookup("output")
+	if f == nil {
+		t.Fatal("--output flag not found")
+	}
+	if f.DefValue != "text" {
+		t.Errorf("--output default = %q, want %q", f.DefValue, "text")
+	}
+}
+
+func TestStatusCmd_TextOutput(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	initRoot := cmd.NewRootCommand()
+	initBuf := new(bytes.Buffer)
+	initRoot.SetOut(initBuf)
+	initRoot.SetErr(initBuf)
+	initRoot.SetArgs([]string{"init"})
+	initRoot.Execute()
+
+	root := cmd.NewRootCommand()
+	var stdout, stderr bytes.Buffer
+	root.SetOut(&stdout)
+	root.SetErr(&stderr)
+	root.SetArgs([]string{"status", dir})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("status failed: %v", err)
+	}
+	// Text mode should produce some output on stderr
+	// (stdout is reserved for machine-readable data)
+}

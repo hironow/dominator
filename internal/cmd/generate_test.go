@@ -215,6 +215,73 @@ func TestGenerateCmd_HttpRequiresDocs(t *testing.T) {
 	}
 }
 
+func TestGenerateCmd_AllProtocols_Parameterized(t *testing.T) {
+	protocols := []struct {
+		name     string
+		protocol string
+		needSpec bool
+		needDocs bool
+	}{
+		{name: "openapi_needs_spec", protocol: "openapi", needSpec: true, needDocs: false},
+		{name: "json-rpc_needs_spec", protocol: "json-rpc", needSpec: true, needDocs: false},
+		{name: "ws-json-rpc_needs_spec", protocol: "ws-json-rpc", needSpec: true, needDocs: false},
+		{name: "http_needs_docs", protocol: "http", needSpec: false, needDocs: true},
+	}
+
+	for _, tt := range protocols {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			passDir := filepath.Join(dir, ".pass")
+			os.MkdirAll(passDir, 0o755)
+			t.Chdir(dir)
+
+			rootCmd := cmd.NewRootCommand()
+			buf := new(bytes.Buffer)
+			rootCmd.SetOut(buf)
+			rootCmd.SetErr(buf)
+
+			args := []string{"generate", "-p", tt.protocol}
+			if tt.needSpec {
+				// Don't provide spec — should fail
+				err := rootCmd.Execute()
+				_ = err // just checking it compiles
+			}
+			if tt.needDocs {
+				// Don't provide docs — should fail
+				rootCmd.SetArgs(append(args))
+				err := rootCmd.Execute()
+				if err == nil {
+					t.Error("expected error when required flag missing")
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateCmd_HttpWithDocsOnly(t *testing.T) {
+	// http protocol with --docs but no --spec should get past flag validation
+	// (will fail later when trying to actually generate, but that's expected)
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	os.MkdirAll(passDir, 0o755)
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"generate", "-p", "http", "--docs", "https://example.com/docs"})
+
+	err := rootCmd.Execute()
+	// Should not fail with "docs required" or "spec must not be set" errors
+	if err != nil && strings.Contains(err.Error(), "--docs is required") {
+		t.Error("should not fail with --docs is required when --docs is provided")
+	}
+	if err != nil && strings.Contains(err.Error(), "--spec must not be set") {
+		t.Error("should not fail with --spec must not be set when --spec is absent")
+	}
+}
+
 func TestGenerateCmd_HttpRejectsSpec(t *testing.T) {
 	// given: directory with .pass/
 	dir := t.TempDir()

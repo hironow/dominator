@@ -121,3 +121,73 @@ approval:
 		t.Error("plan should not be approved yet")
 	}
 }
+
+func TestCheckCmd_OutputIsJSON(t *testing.T) {
+	// given: initialized .pass/ with a k6 script
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	for _, sub := range []string{".run", "events", "k6-scripts"} {
+		os.MkdirAll(filepath.Join(passDir, sub), 0o755)
+	}
+	os.WriteFile(filepath.Join(passDir, "k6-scripts", "api-test.js"), []byte("// k6"), 0o644)
+	cfgContent := `lang: en
+claude_cmd: claude
+model: opus
+timeout_sec: 60
+load:
+  vus: 10
+  duration: "30s"
+nfr:
+  performance:
+    p95_latency_ms: 500
+    error_rate_percent: 1.0
+  reliability:
+    success_rate_percent: 99.0
+  scalability:
+    target_rps: 100
+approval:
+  required: true
+`
+	os.WriteFile(filepath.Join(passDir, "config.yaml"), []byte(cfgContent), 0o644)
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+	rootCmd.SetArgs([]string{"check"})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	if !json.Valid(stdout.Bytes()) {
+		t.Errorf("stdout is not valid JSON: %s", stdout.String())
+	}
+}
+
+func TestCheckCmd_NoScripts(t *testing.T) {
+	// given: initialized .pass/ without k6-scripts
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	os.MkdirAll(passDir, 0o755)
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"check"})
+
+	// when
+	err := rootCmd.Execute()
+
+	// then
+	if err == nil {
+		t.Fatal("expected error when no scripts found")
+	}
+}

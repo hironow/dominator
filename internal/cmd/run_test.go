@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hironow/dominator/internal/cmd"
+	"github.com/spf13/cobra"
 )
 
 func TestRunCmd_SubcommandExists(t *testing.T) {
@@ -76,5 +77,44 @@ func TestRunCmd_FailsWithoutInit(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "dominator init") {
 		t.Errorf("expected error to mention 'dominator init', got: %v", err)
+	}
+}
+
+func TestRunCmd_PlanIdFlag(t *testing.T) {
+	rootCmd := cmd.NewRootCommand()
+	var runCmd *cobra.Command
+	for _, sub := range rootCmd.Commands() {
+		if sub.Name() == "run" {
+			runCmd = sub
+			break
+		}
+	}
+	if runCmd == nil {
+		t.Fatal("run subcommand not found")
+	}
+
+	f := runCmd.Flags().Lookup("plan-id")
+	if f == nil {
+		t.Fatal("--plan-id flag not found")
+	}
+}
+
+func TestRunCmd_NonExistentPlan(t *testing.T) {
+	dir := t.TempDir()
+	passDir := filepath.Join(dir, ".pass")
+	for _, sub := range []string{".run", "events"} {
+		os.MkdirAll(filepath.Join(passDir, sub), 0o755)
+	}
+	t.Chdir(dir)
+
+	rootCmd := cmd.NewRootCommand()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"run", "--plan-id", "does-not-exist"})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for nonexistent plan")
 	}
 }
