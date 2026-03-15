@@ -88,6 +88,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddCommand(
 		newInitCommand(),
+		newGenerateCommand(),
 		newDoctorCommand(),
 		newArchivePruneCommand(),
 		newCleanCommand(),
