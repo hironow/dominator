@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Build (windows)
+        run: GOOS=windows GOARCH=amd64 go build ./...
+
+      - name: Build (darwin)
+        run: GOOS=darwin GOARCH=arm64 go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./... -count=1 -timeout=300s
+
+      - name: Test (race)
+        run: go test ./... -race -count=1 -short
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Install semgrep
+        run: pip install semgrep
+
+      - name: Root layout check
+        run: just root-guard
+
+      - name: Run semgrep
+        run: just semgrep
+
+      - name: Audit nosemgrep annotations
+        run: just nosemgrep-audit
+
+      - name: Test semgrep rules
+        run: just semgrep-test
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run E2E tests
+        run: |
+          docker compose -f tests/e2e/compose-e2e.yaml build
+          docker compose -f tests/e2e/compose-e2e.yaml run --rm e2e \
+            go test -tags e2e ./tests/e2e/ -count=1 -v -timeout=600s
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f tests/e2e/compose-e2e.yaml down -v
+
+  package-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Test package audit (external test ratio)
+        run: |
+          audit_dir() {
+            local dir="$1" label="$2" threshold="$3"
+            ext=$(grep -rl '^package .*_test$' "$dir" --include='*_test.go' 2>/dev/null | xargs grep -c '^func Test' 2>/dev/null | awk -F: '{s+=$2}END{print s+0}')
+            same=$(grep -rL '^package .*_test$' "$dir" --include='*_test.go' 2>/dev/null | xargs grep -c '^func Test' 2>/dev/null | awk -F: '{s+=$2}END{print s+0}')
+            total=$((ext + same))
+            if [ "$total" -gt 0 ]; then pct=$((ext * 100 / total)); else pct=0; fi
+            echo "$label: external $ext (${pct}%) / same $same ($((100 - pct))%)"
+            if [ "$pct" -lt "$threshold" ]; then
+              echo "FAIL: $label external ratio ${pct}% is below threshold ${threshold}%" >&2
+              return 1
+            fi
+          }
+          audit_dir "internal" "internal/" 70
+          audit_dir "internal/session" "internal/session/" 75
+
+      - name: Test package rationale audit (white-box-reason comments)
+        run: just test-package-rationale-audit
+
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Generate CLI docs
+        run: go run ./internal/tools/docgen/
+
+      - name: Check for uncommitted doc changes
+        run: git diff --exit-code docs/cli/
+
+      - name: Check dead links in docs
+        run: |
+          ok=true
+          for f in $(find docs/ README.md -name '*.md' 2>/dev/null); do
+            dir=$(dirname "$f")
+            grep -oE '\[([^]]*)\]\(([^)]+)\)' "$f" | grep -oE '\(([^)]+)\)' | tr -d '()' | grep -v '^http' | grep -v '^#' | while read -r link; do
+              target="$dir/$link"
+              target="${target%%#*}"
+              if [ ! -f "$target" ] && [ ! -d "$target" ]; then
+                echo "DEAD LINK: $f -> $link (resolved: $target)"
+                echo "DEAD_LINK_FOUND=true" >> "$GITHUB_ENV"
+              fi
+            done
+          done
+          if [ "${DEAD_LINK_FOUND:-}" = "true" ]; then exit 1; fi
+
+      - name: Check forbidden vocabulary in docs
+        run: |
+          if grep -rn 'LINEAR_API_KEY' docs/ README.md internal/ 2>/dev/null | grep -v '_test\.go' | grep -v '\.semgrep/'; then
+            echo "ERROR: Found LINEAR_API_KEY reference"
+            exit 1
+          fi
+
+      - name: README truth check
+        run: |
+          fail=0
+          if grep -qE '^\+-- templates/' README.md 2>/dev/null; then
+            echo "FAIL: README references root templates/ (should be internal/platform/templates/)"
+            fail=1
+          fi
+          for dir in internal/cmd internal/domain internal/usecase internal/usecase/port internal/session internal/eventsource internal/platform; do
+            if [ ! -d "$dir" ]; then
+              echo "FAIL: $dir does not exist"
+              fail=1
+            fi
+          done
+          if [ ! -f doc.go ]; then
+            echo "FAIL: doc.go missing"
+            fail=1
+          fi
+          exit $fail
