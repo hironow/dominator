@@ -111,6 +111,7 @@ func TestRunJudge_Pass(t *testing.T) {
 	judged, err := usecase.RunJudge(
 		context.Background(),
 		"plan-001",
+		t.TempDir(),
 		planStore,
 		k6Runner,
 		eventStore,
@@ -174,6 +175,7 @@ func TestRunJudge_Violation(t *testing.T) {
 	judged, err := usecase.RunJudge(
 		context.Background(),
 		"plan-002",
+		t.TempDir(),
 		planStore,
 		k6Runner,
 		eventStore,
@@ -230,6 +232,7 @@ func TestRunJudge_NotApproved(t *testing.T) {
 	_, err := usecase.RunJudge(
 		context.Background(),
 		"plan-003",
+		t.TempDir(),
 		planStore,
 		k6Runner,
 		eventStore,

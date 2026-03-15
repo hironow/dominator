@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/hironow/dominator/internal/domain"
@@ -27,6 +28,7 @@ type JudgeDMailEmitter interface {
 func RunJudge(
 	ctx context.Context,
 	planID domain.PlanID,
+	stateDir string,
 	planStore port.PlanStore,
 	k6Runner port.K6Runner,
 	eventStore port.EventStore,
@@ -44,10 +46,12 @@ func RunJudge(
 		return domain.JudgedData{}, fmt.Errorf("plan %s is not approved — run 'dominator approve --plan-id %s' first", planID, planID)
 	}
 
-	logger.Info("Executing plan %s (script: %s)", planID, plan.Script)
+	// Resolve script path relative to state dir (plan.Script is filename only)
+	scriptPath := filepath.Join(stateDir, "k6-scripts", plan.Script)
+	logger.Info("Executing plan %s (script: %s)", planID, scriptPath)
 
 	// 2. Run k6
-	results, err := k6Runner.Run(ctx, plan.Script, plan.Load, stderrW)
+	results, err := k6Runner.Run(ctx, scriptPath, plan.Load, stderrW)
 	if err != nil {
 		return domain.JudgedData{}, fmt.Errorf("k6 run: %w", err)
 	}

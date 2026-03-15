@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // SilentError wraps an error whose message has already been printed to stderr
 // by the command itself. main.go should suppress output for this error
@@ -12,13 +15,18 @@ func (e *SilentError) Unwrap() error { return e.Err }
 
 // ExitCode maps an error to a process exit code.
 //
-//	nil   -> 0 (success)
-//	other -> 1 (runtime error)
+//	nil              -> 0 (success / NFR pass)
+//	JudgmentError    -> 1 (NFR violation)
+//	other            -> 2 (runtime error)
 func ExitCode(err error) int {
 	if err == nil {
 		return 0
 	}
-	return 1
+	var je *JudgmentError
+	if errors.As(err, &je) {
+		return 1
+	}
+	return 2
 }
 
 // IndexEntry represents one line in the archive index JSONL file.

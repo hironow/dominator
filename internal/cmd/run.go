@@ -54,6 +54,7 @@ Exit codes:
 			judged, err := usecase.RunJudge(
 				cmd.Context(),
 				planID,
+				stateDir,
 				planStore,
 				k6Runner,
 				eventStore,
