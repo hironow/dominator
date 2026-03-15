@@ -248,7 +248,7 @@ func TestGenerateCmd_AllProtocols_Parameterized(t *testing.T) {
 			}
 			if tt.needDocs {
 				// Don't provide docs — should fail
-				rootCmd.SetArgs(append(args))
+				rootCmd.SetArgs(args)
 				err := rootCmd.Execute()
 				if err == nil {
 					t.Error("expected error when required flag missing")
