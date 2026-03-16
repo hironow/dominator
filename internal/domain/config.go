@@ -58,10 +58,25 @@ type LoadConfig struct {
 	RampUp   string `yaml:"ramp_up"`
 }
 
-// ApprovalConfig controls whether human approval is required.
-type ApprovalConfig struct {
-	Required bool `yaml:"required"`
+// ApproverConfig describes how approval behavior is configured.
+// Implemented by ApprovalConfig. Used by session.BuildApprover.
+type ApproverConfig interface {
+	IsAutoApprove() bool
+	ApproveCmdString() string
 }
+
+// ApprovalConfig controls whether human approval is required.
+// ApprovalConfig implements ApproverConfig.
+type ApprovalConfig struct {
+	Required   bool   `yaml:"required"`
+	ApproveCmd string `yaml:"approve_cmd,omitempty"`
+}
+
+// IsAutoApprove reports whether auto-approve is enabled (approval not required).
+func (a ApprovalConfig) IsAutoApprove() bool { return !a.Required }
+
+// ApproveCmdString returns the approval command string.
+func (a ApprovalConfig) ApproveCmdString() string { return a.ApproveCmd }
 
 // DefaultConfig returns a Config populated with reasonable defaults.
 func DefaultConfig() Config {
