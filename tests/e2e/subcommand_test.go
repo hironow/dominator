@@ -82,6 +82,8 @@ func TestE2E_Init_AlreadyExists(t *testing.T) {
 func TestE2E_Validate_ValidConfig(t *testing.T) {
 	dir := initTestRepo(t)
 	writeConfig(t, dir, defaultTestConfig())
+	// validate requires at least one k6 script
+	writeK6Script(t, dir, "load-test.js")
 
 	_, stderr, err := runCmd(t, dir, "validate")
 	if err != nil {
@@ -168,9 +170,9 @@ func TestE2E_Status_JSON(t *testing.T) {
 func TestE2E_Clean(t *testing.T) {
 	dir := initTestRepo(t)
 
-	_, stderr, err := runCmd(t, dir, "clean")
+	_, stderr, err := runCmd(t, dir, "clean", "--yes")
 	if err != nil {
-		t.Fatalf("clean: %v\nstderr: %s", err, stderr)
+		t.Fatalf("clean --yes: %v\nstderr: %s", err, stderr)
 	}
 	if _, statErr := statFile(dir + "/.pass"); statErr == nil {
 		t.Error("expected .pass/ to be removed after clean")

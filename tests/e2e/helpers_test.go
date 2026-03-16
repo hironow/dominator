@@ -158,6 +158,23 @@ func defaultTestConfig() map[string]any {
 	}
 }
 
+// writeK6Script creates a minimal k6 script in .pass/k6-scripts/.
+func writeK6Script(t *testing.T, dir, name string) {
+	t.Helper()
+	scriptDir := filepath.Join(dir, ".pass", "k6-scripts")
+	if err := os.MkdirAll(scriptDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := `import http from 'k6/http';
+export default function () {
+  http.get('http://localhost:3000');
+}
+`
+	if err := os.WriteFile(filepath.Join(scriptDir, name), []byte(script), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // parseJSONOutput parses the first JSON object found in stdout.
 func parseJSONOutput(t *testing.T, stdout string, v any) {
 	t.Helper()
