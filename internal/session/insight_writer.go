@@ -28,7 +28,6 @@ func (w *InsightWriter) RecordHue(result domain.JudgedData) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create insights dir: %w", err)
 	}
-
 	entry := fmt.Sprintf(
 		"\n## %s — %s\n\nScript: %s, VUs: %d, Duration: %s\nDeviations: %d\n",
 		time.Now().UTC().Format(time.RFC3339),
@@ -65,7 +64,6 @@ func (w *InsightWriter) RecordCoefficient(result domain.JudgedData) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create insights dir: %w", err)
 	}
-
 	var b strings.Builder
 	fmt.Fprintf(&b,
 		"\n## %s — Violation\n\n| Metric | Threshold | Actual | Deviation | Severity |\n|--------|-----------|--------|-----------|----------|\n",

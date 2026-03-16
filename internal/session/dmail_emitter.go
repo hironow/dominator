@@ -30,7 +30,6 @@ func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create outbox dir: %w", err)
 	}
-
 	ts := time.Now().UTC().Format("20060102T150405Z")
 	maxSeverity := maxDeviationSeverity(result.Deviations)
 	table := buildDeviationTable(result.Deviations)
@@ -78,7 +77,6 @@ func (e *DMailEmitter) EmitPass(result domain.JudgedData) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create outbox dir: %w", err)
 	}
-
 	ts := time.Now().UTC().Format("20060102T150405Z")
 	name := fmt.Sprintf("nfr-pass-%s.md", ts)
 

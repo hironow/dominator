@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -55,7 +56,17 @@ func NewRootCommand() *cobra.Command {
 				os.Setenv("NO_COLOR", "1")
 			}
 			verbose, _ := cmd.Flags().GetBool("verbose")
-			logger := platform.NewLogger(cmd.ErrOrStderr(), verbose)
+			out := cmd.ErrOrStderr()
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			if quiet {
+				out = io.Discard
+			}
+			logger := platform.NewLogger(out, verbose)
+			outputFmt, _ := cmd.Flags().GetString("output")
+			if outputFmt != "json" {
+				logger.Header("dominator", Version)
+				logger.Section(cmd.Name())
+			}
 			ctx := context.WithValue(cmd.Context(), loggerKey, logger)
 			shutdownTracer = initTracer("dominator", Version)
 			shutdownMeter = initMeter("dominator", Version)
@@ -83,6 +94,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringP("config", "c", "", "config file path")
 	cmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 	cmd.PersistentFlags().Bool("no-color", false, "Disable colored output (respects NO_COLOR env)")
+	cmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress all stderr output")
 	cmd.PersistentFlags().StringP("lang", "l", "", "output language (ja, en)")
 	cmd.PersistentFlags().StringP("output", "o", "text", "Output format: text, json")
 
@@ -92,6 +104,7 @@ func NewRootCommand() *cobra.Command {
 		newCheckCommand(),
 		newApproveCommand(),
 		newRunCommand(),
+		newValidateCommand(),
 		newConfigCommand(),
 		newDoctorCommand(),
 		newArchivePruneCommand(),

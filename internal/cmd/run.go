@@ -46,7 +46,16 @@ Exit codes:
 			stateDir := filepath.Join(repoRoot, domain.StateDir)
 
 			planStore := &session.PlanStore{StateDir: stateDir}
-			k6Runner := &session.K6Runner{Logger: logger}
+			cfg, cfgErr := session.LoadConfig(filepath.Join(stateDir, "config.yaml"))
+			if cfgErr != nil {
+				return fmt.Errorf("load config: %w", cfgErr)
+			}
+			k6Runner := &session.K6MCPAdapter{
+				ClaudeCmd:  cfg.ClaudeCmd,
+				Model:      cfg.Model,
+				TimeoutSec: cfg.TimeoutSec,
+				Logger:     logger,
+			}
 			eventStore := session.NewEventStore(stateDir, logger)
 			insightWriter := &session.InsightWriter{StateDir: stateDir, Logger: logger}
 			dmailEmitter := &session.DMailEmitter{StateDir: stateDir, Logger: logger}

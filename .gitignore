@@ -1,21 +1,18 @@
-# Binary (root only, not cmd/dominator/)
-/dominator
-
 # OS
 .DS_Store
-
-# IDE
-.idea/
-.vscode/
-*.swp
-
-# Go
-/vendor/
-
-# State (gitignored subdirs are managed by init command)
-.pass/.run/
-.pass/events/
-.pass/inbox/
-.pass/outbox/
-.pass/archive/
+# build artifacts
 /dist/
+# test
+coverage.out
+# environment-specific local files (must not contain full paths)
+*.local.*
+# claude local settings
+.claude/*.local.*
+# git worktrees
+.worktrees/
+# plan drafts (ephemeral)
+docs/plans/
+# golang
+.gocache/
+# firebase local debug log
+firebase-debug.log
