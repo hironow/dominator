@@ -8,6 +8,7 @@ import (
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/platform"
+	"github.com/hironow/dominator/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -51,11 +52,18 @@ Pass --execute to actually remove the files.`,
 			}
 
 			rebuildIndex, _ := cmd.Flags().GetBool("rebuild-index")
+			stateDir := filepath.Join(repoRoot, domain.StateDir)
 			if rebuildIndex {
 				if execute || dryRunExplicit {
 					return fmt.Errorf("--rebuild-index cannot be combined with --execute or --dry-run")
 				}
-				logger.Info("rebuild-index: not yet implemented")
+				iw := &session.IndexWriter{}
+				indexPath := filepath.Join(stateDir, "archive", "index.jsonl")
+				n, rbErr := iw.Rebuild(indexPath, stateDir, "dominator")
+				if rbErr != nil {
+					return fmt.Errorf("rebuild index: %w", rbErr)
+				}
+				logger.Info("Rebuilt index: %d entries → %s", n, indexPath)
 				return nil
 			}
 
