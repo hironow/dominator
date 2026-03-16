@@ -32,13 +32,17 @@ func main() {
 		return
 	}
 
-	prompt, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fake-claude: read stdin: %v\n", err)
-		os.Exit(1)
+	// Read prompt from -p flag or stdin
+	text := extractPrompt(os.Args[1:])
+	if text == "" {
+		prompt, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "fake-claude: read stdin: %v\n", err)
+			os.Exit(1)
+		}
+		text = string(prompt)
 	}
 
-	text := string(prompt)
 	outputFormat := extractOutputFormat(os.Args[1:])
 
 	// Match prompt content to a fixture.
@@ -51,6 +55,16 @@ func main() {
 
 	// Default: return a generic success response.
 	emitResponse(defaultResponse, outputFormat)
+}
+
+// extractPrompt finds -p <prompt> in args.
+func extractPrompt(args []string) string {
+	for i, arg := range args {
+		if arg == "-p" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
 }
 
 func extractOutputFormat(args []string) string {

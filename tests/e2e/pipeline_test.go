@@ -121,12 +121,12 @@ func TestE2E_Pipeline_RunUnapprovedPlan(t *testing.T) {
 	}
 }
 
-func TestE2E_Pipeline_RunApprovedPlan_NoK6(t *testing.T) {
+func TestE2E_Pipeline_RunApprovedPlan_MissingScript(t *testing.T) {
 	dir := initTestRepo(t)
 	writeConfig(t, dir, defaultTestConfig())
 
 	planID := "test-plan-004"
-	createPlan(t, dir, planID, "load-test.js")
+	createPlan(t, dir, planID, "nonexistent-script.js")
 
 	// Approve
 	_, _, err := runCmd(t, dir, "approve", "--plan-id", planID)
@@ -134,10 +134,10 @@ func TestE2E_Pipeline_RunApprovedPlan_NoK6(t *testing.T) {
 		t.Fatalf("approve: %v", err)
 	}
 
-	// Run — should fail because Claude/mcp-k6 not available (exit code 2)
+	// Run with missing script — should fail (exit code 2)
 	_, _, runErr := runCmd(t, dir, "run", "--plan-id", planID)
 	if runErr == nil {
-		t.Fatal("expected error when Claude/mcp-k6 not available")
+		t.Fatal("expected error for missing k6 script")
 	}
 	assertExitCode(t, runErr, 2)
 }
