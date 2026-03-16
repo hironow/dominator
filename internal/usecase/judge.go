@@ -89,22 +89,28 @@ func RunJudge(
 		}
 	}
 
-	// 7. Record events
+	// 7. Record events (best-effort — log but do not fail judgment)
 	now := time.Now()
 	judgedEvent, err := domain.NewEvent(domain.EventJudged, judged, now)
-	if err == nil {
-		eventStore.Append(judgedEvent)
+	if err != nil {
+		logger.Warn("Failed to create judged event: %v", err)
+	} else if _, appendErr := eventStore.Append(judgedEvent); appendErr != nil {
+		logger.Warn("Failed to append judged event: %v", appendErr)
 	}
 
 	if verdict == domain.VerdictViolation {
 		violationEvent, err := domain.NewEvent(domain.EventViolationDetected, judged, now)
-		if err == nil {
-			eventStore.Append(violationEvent)
+		if err != nil {
+			logger.Warn("Failed to create violation event: %v", err)
+		} else if _, appendErr := eventStore.Append(violationEvent); appendErr != nil {
+			logger.Warn("Failed to append violation event: %v", appendErr)
 		}
 	} else {
 		passEvent, err := domain.NewEvent(domain.EventPassConfirmed, judged, now)
-		if err == nil {
-			eventStore.Append(passEvent)
+		if err != nil {
+			logger.Warn("Failed to create pass event: %v", err)
+		} else if _, appendErr := eventStore.Append(passEvent); appendErr != nil {
+			logger.Warn("Failed to append pass event: %v", appendErr)
 		}
 	}
 
