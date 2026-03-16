@@ -62,8 +62,11 @@ func NewRootCommand() *cobra.Command {
 				out = io.Discard
 			}
 			logger := platform.NewLogger(out, verbose)
-			logger.Header("dominator", Version)
-			logger.Section(cmd.Name())
+			outputFmt, _ := cmd.Flags().GetString("output")
+			if outputFmt != "json" {
+				logger.Header("dominator", Version)
+				logger.Section(cmd.Name())
+			}
 			ctx := context.WithValue(cmd.Context(), loggerKey, logger)
 			shutdownTracer = initTracer("dominator", Version)
 			shutdownMeter = initMeter("dominator", Version)
