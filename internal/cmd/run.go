@@ -39,7 +39,7 @@ Exit codes:
 				return err
 			}
 
-			planIDRaw, _ := cmd.Flags().GetString("plan-id")
+			planIDRaw, _ := cmd.Flags().GetString("plan-id") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			planID := domain.PlanID(planIDRaw)
 
 			logger := loggerFrom(cmd)

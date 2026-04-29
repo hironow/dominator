@@ -45,24 +45,24 @@ func NewRootCommand() *cobra.Command {
 		SilenceUsage:  true,
 		Version:       Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			cfgPath, _ := cmd.Flags().GetString("config")
+			cfgPath, _ := cmd.Flags().GetString("config") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			if cfgPath != "" {
 				applyOtelEnv(filepath.Dir(cfgPath))
 			} else {
 				applyOtelEnv(domain.StateDir)
 			}
-			noColor, _ := cmd.Flags().GetBool("no-color")
+			noColor, _ := cmd.Flags().GetBool("no-color") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			if noColor {
 				os.Setenv("NO_COLOR", "1")
 			}
-			verbose, _ := cmd.Flags().GetBool("verbose")
+			verbose, _ := cmd.Flags().GetBool("verbose") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			out := cmd.ErrOrStderr()
-			quiet, _ := cmd.Flags().GetBool("quiet")
+			quiet, _ := cmd.Flags().GetBool("quiet") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			if quiet {
 				out = io.Discard
 			}
 			logger := platform.NewLogger(out, verbose)
-			outputFmt, _ := cmd.Flags().GetString("output")
+			outputFmt, _ := cmd.Flags().GetString("output") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			if outputFmt != "json" {
 				logger.Header("dominator", Version)
 				logger.Section(cmd.Name())

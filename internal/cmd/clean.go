@@ -36,7 +36,7 @@ func newCleanCommand() *cobra.Command {
 				return nil
 			}
 
-			yes, _ := cmd.Flags().GetBool("yes")
+			yes, _ := cmd.Flags().GetBool("yes") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			if !yes {
 				fmt.Fprintf(cmd.ErrOrStderr(), "The following will be deleted:\n  %s/\n\nDelete? [y/N]: ", stateDir)
 				var answer string

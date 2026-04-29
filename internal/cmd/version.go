@@ -29,7 +29,7 @@ for structured output suitable for scripts and CI.`,
 				"arch":    runtime.GOARCH,
 			}
 
-			jsonFlag, _ := cmd.Flags().GetBool("json")
+			jsonFlag, _ := cmd.Flags().GetBool("json") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			if jsonFlag {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")

@@ -48,7 +48,7 @@ Use -o json for machine-readable JSON output to stdout.`,
 			logger := platform.NewLogger(cmd.ErrOrStderr(), false)
 			report := session.Status(cmd.Context(), passRoot, logger)
 
-			outputFmt, _ := cmd.Flags().GetString("output")
+			outputFmt, _ := cmd.Flags().GetString("output") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			if outputFmt == "json" {
 				data, jsonErr := json.Marshal(report)
 				if jsonErr != nil {

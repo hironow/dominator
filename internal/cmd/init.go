@@ -43,7 +43,7 @@ the --otel-backend flag. The generated .otel.env file is written into
 			if err != nil {
 				return err
 			}
-			force, _ := cmd.Flags().GetBool("force")
+			force, _ := cmd.Flags().GetBool("force") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			passRoot := filepath.Join(repoRoot, domain.StateDir)
 			if _, err := os.Stat(passRoot); err == nil && !force {
 				return fmt.Errorf("%s already exists\nUse --force to overwrite", passRoot)
@@ -59,10 +59,10 @@ the --otel-backend flag. The generated .otel.env file is written into
 			}
 			fmt.Fprintf(cmd.ErrOrStderr(), "  Initialized %s\n", passRoot)
 
-			otelBackend, _ := cmd.Flags().GetString("otel-backend")
+			otelBackend, _ := cmd.Flags().GetString("otel-backend") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			if otelBackend != "" {
-				otelEntity, _ := cmd.Flags().GetString("otel-entity")
-				otelProject, _ := cmd.Flags().GetString("otel-project")
+				otelEntity, _ := cmd.Flags().GetString("otel-entity")   // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
+				otelProject, _ := cmd.Flags().GetString("otel-project") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 				content, otelErr := platform.OtelEnvContent(otelBackend, otelEntity, otelProject)
 				if otelErr != nil {
 					return otelErr

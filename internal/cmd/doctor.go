@@ -34,8 +34,8 @@ SKIP (dependency missing), WARN (advisory, exit 0).`,
   dominator doctor --repair`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, _ := cmd.Flags().GetString("config")
-			jsonOut, _ := cmd.Flags().GetBool("json")
+			configPath, _ := cmd.Flags().GetString("config") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
+			jsonOut, _ := cmd.Flags().GetBool("json")        // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 
 			repoRoot, err := resolveTargetDir(args)
 			if err != nil {
@@ -47,7 +47,7 @@ SKIP (dependency missing), WARN (advisory, exit 0).`,
 			}
 
 			logger := platform.NewLogger(cmd.ErrOrStderr(), false)
-			repair, _ := cmd.Flags().GetBool("repair")
+			repair, _ := cmd.Flags().GetBool("repair") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			results := runDoctor(configPath, repoRoot, logger, repair)
 
 			if jsonOut {
