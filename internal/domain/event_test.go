@@ -323,6 +323,43 @@ func containsStr(s, substr string) bool {
 	return false
 }
 
+// TestParseEvent_ValidReturnsEvent verifies that ParseEvent returns the event
+// unchanged when all required fields are populated (Parse-Don't-Validate).
+func TestParseEvent_ValidReturnsEvent(t *testing.T) {
+	t.Parallel()
+
+	data := domain.ScriptGeneratedData{SpecURL: "https://example.com"}
+	ev, err := domain.NewEvent(domain.EventScriptGenerated, data, time.Now())
+	if err != nil {
+		t.Fatalf("NewEvent: %v", err)
+	}
+
+	// when
+	parsed, err := domain.ParseEvent(ev)
+
+	// then
+	if err != nil {
+		t.Errorf("ParseEvent valid event: got error %v", err)
+	}
+	if parsed.ID != ev.ID {
+		t.Errorf("ParseEvent: ID = %q, want %q", parsed.ID, ev.ID)
+	}
+}
+
+// TestParseEvent_InvalidReturnsError verifies that ParseEvent returns a zero
+// value and an error when required fields are missing.
+func TestParseEvent_InvalidReturnsError(t *testing.T) {
+	t.Parallel()
+
+	// when
+	_, err := domain.ParseEvent(domain.Event{}) // zero value, all fields missing
+
+	// then
+	if err == nil {
+		t.Error("ParseEvent zero-value event: expected error, got nil")
+	}
+}
+
 func TestNewEvent_ErrorOnUnmarshalableData(t *testing.T) {
 	t.Parallel()
 
