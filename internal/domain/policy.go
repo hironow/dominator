@@ -8,7 +8,7 @@ type Policy struct {
 }
 
 // PolicyEngine dispatches events to registered handlers.
-type PolicyEngine struct {
+type PolicyEngine struct { // nosemgrep: naming.ambiguous-suffix-struct-go -- canonical 4-tool policy dispatcher pattern; "Engine" is the established domain term across all tap tools [permanent]
 	handlers map[EventType][]PolicyHandler
 }
 
