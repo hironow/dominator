@@ -12,7 +12,7 @@ import (
 
 // ValidateStateDir checks that the .pass/ state directory exists and contains
 // the required subdirectories.
-func ValidateStateDir(repoRoot string) error {
+func ValidateStateDir(repoRoot string) error { // nosemgrep: parse-dont-validate.validate-returns-error-only-go -- existence check only; caller already holds repoRoot, no new parsed value to return; callers need only the error signal [permanent]
 	passRoot := filepath.Join(repoRoot, domain.StateDir)
 	info, err := os.Stat(passRoot)
 	if err != nil {

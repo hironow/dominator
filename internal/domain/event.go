@@ -77,7 +77,7 @@ func ParseEvent(e Event) (Event, error) {
 }
 
 // ScriptGeneratedData is the payload for EventScriptGenerated.
-type ScriptGeneratedData struct {
+type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
 	SpecURL    string `json:"spec_url"`
 	Protocol   string `json:"protocol"`
 	ScriptPath string `json:"script_path"`
@@ -85,7 +85,7 @@ type ScriptGeneratedData struct {
 }
 
 // GenerationFailedData is the payload for EventGenerationFailed.
-type GenerationFailedData struct {
+type GenerationFailedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
 	SpecURL string `json:"spec_url"`
 	Reason  string `json:"reason"`
 }
