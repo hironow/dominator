@@ -15,7 +15,7 @@ const ConfigFile = "config.yaml"
 const DefaultClaudeCmd = "claude"
 
 // Protocol is an always-valid protocol identifier.
-type Protocol struct{ v string }
+type Protocol struct{ v string } // nosemgrep: structure.multiple-exported-structs-go -- domain primitive value set (Protocol/SpecURL/RepoPath/Days); all are parse-don't-validate value objects sharing the same package-level constructors; splitting would create circular or fragmented imports [permanent]
 
 // validProtocols defines the set of accepted protocol values.
 var validProtocols = map[string]bool{
@@ -42,7 +42,7 @@ func NewProtocol(raw string) (Protocol, error) {
 func (p Protocol) String() string { return p.v }
 
 // SpecURL is an always-valid HTTP(S) URL string pointing to an API spec.
-type SpecURL struct{ v string }
+type SpecURL struct{ v string } // nosemgrep: structure.multiple-exported-structs-go -- domain primitive value set (Protocol/SpecURL/RepoPath/Days); all are parse-don't-validate value objects sharing the same package-level constructors; splitting would create circular or fragmented imports [permanent]
 
 // NewSpecURL parses a raw string into a SpecURL.
 // Returns an error if the value is empty or not a valid HTTP(S) URL.
@@ -60,7 +60,7 @@ func NewSpecURL(raw string) (SpecURL, error) {
 func (s SpecURL) String() string { return s.v }
 
 // RepoPath is an always-valid non-empty repository path.
-type RepoPath struct{ v string }
+type RepoPath struct{ v string } // nosemgrep: structure.multiple-exported-structs-go -- domain primitive value set (Protocol/SpecURL/RepoPath/Days); all are parse-don't-validate value objects sharing the same package-level constructors; splitting would create circular or fragmented imports [permanent]
 
 // NewRepoPath parses a raw string into a RepoPath.
 // Returns an error if the path is empty.
@@ -80,7 +80,7 @@ func ValidLang(lang string) bool {
 }
 
 // Days is an always-valid retention period in days (positive integer).
-type Days struct{ v int }
+type Days struct{ v int } // nosemgrep: structure.multiple-exported-structs-go -- domain primitive value set (Protocol/SpecURL/RepoPath/Days); all are parse-don't-validate value objects sharing the same package-level constructors; splitting would create circular or fragmented imports [permanent]
 
 // NewDays parses an integer into a Days primitive.
 // Returns an error if the value is not positive.

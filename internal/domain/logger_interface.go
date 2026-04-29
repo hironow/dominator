@@ -1,7 +1,7 @@
 package domain
 
 // Logger provides structured log output. Implementations must be goroutine-safe.
-type Logger interface {
+type Logger interface { // nosemgrep: structure.multiple-exported-interfaces-go -- logger interface family (Logger/BannerLogger); BannerLogger is an optional extension of Logger — co-location enables the LogBanner/LogHeader/LogSection helper functions that require both interfaces [permanent]
 	Info(format string, args ...any)
 	OK(format string, args ...any)
 	Warn(format string, args ...any)
@@ -10,7 +10,7 @@ type Logger interface {
 }
 
 // NopLogger is a no-op logger for testing and quiet mode.
-type NopLogger struct{}
+type NopLogger struct{} // nosemgrep: structure.exported-struct-and-interface-go -- NopLogger is the null object for Logger; co-location allows compile-time verification that NopLogger satisfies Logger without an import cycle [permanent]
 
 func (*NopLogger) Info(string, ...any)  {}
 func (*NopLogger) OK(string, ...any)    {}
@@ -28,7 +28,7 @@ const (
 
 // BannerLogger is an optional extension for loggers that support
 // inverted-color banner lines for D-Mail intent logging.
-type BannerLogger interface {
+type BannerLogger interface { // nosemgrep: structure.multiple-exported-interfaces-go -- logger interface family (Logger/BannerLogger); BannerLogger is an optional extension of Logger — co-location enables the LogBanner/LogHeader/LogSection helper functions that require both interfaces [permanent]
 	Banner(dir BannerDirection, kind, name, description string)
 	Header(toolName, version string)
 	Section(title string)

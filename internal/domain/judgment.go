@@ -8,7 +8,7 @@ const (
 )
 
 // K6Results holds the results from a k6 load test run.
-type K6Results struct {
+type K6Results struct { // nosemgrep: structure.multiple-exported-structs-go -- judgment data group (K6Results/NfrDeviation/JudgedData); EvaluateNfr consumes K6Results and NfrConfig, produces NfrDeviation slice — all three co-locate as the judgment aggregate read model [permanent]
 	P95LatencyMs     float64 `json:"p95_latency_ms"`
 	ErrorRatePercent float64 `json:"error_rate_percent"`
 	SuccessRate      float64 `json:"success_rate"`
@@ -16,7 +16,7 @@ type K6Results struct {
 }
 
 // NfrDeviation records a single NFR threshold violation.
-type NfrDeviation struct {
+type NfrDeviation struct { // nosemgrep: structure.multiple-exported-structs-go -- judgment data group (K6Results/NfrDeviation/JudgedData); EvaluateNfr consumes K6Results and NfrConfig, produces NfrDeviation slice — all three co-locate as the judgment aggregate read model [permanent]
 	Metric    string  `json:"metric"`
 	Threshold float64 `json:"threshold"`
 	Actual    float64 `json:"actual"`

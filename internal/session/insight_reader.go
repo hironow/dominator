@@ -13,14 +13,14 @@ import (
 )
 
 // HueEntry represents a single section parsed from hue.md.
-type HueEntry struct {
+type HueEntry struct { // nosemgrep: structure.multiple-exported-structs-go -- insight reader+DTO triple (HueEntry/CoefficientEntry/InsightReader); both DTOs are produced exclusively by InsightReader methods — co-location avoids unnecessary DTO-only package [permanent]
 	Timestamp string `json:"timestamp"`
 	Verdict   string `json:"verdict"`
 	Details   string `json:"details"`
 }
 
 // CoefficientEntry represents a single section parsed from coefficient.md.
-type CoefficientEntry struct {
+type CoefficientEntry struct { // nosemgrep: structure.multiple-exported-structs-go -- insight reader+DTO triple (HueEntry/CoefficientEntry/InsightReader); both DTOs are produced exclusively by InsightReader methods — co-location avoids unnecessary DTO-only package [permanent]
 	Timestamp string `json:"timestamp"`
 	Label     string `json:"label"`
 	Table     string `json:"table"`

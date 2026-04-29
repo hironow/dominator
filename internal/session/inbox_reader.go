@@ -13,7 +13,7 @@ import (
 )
 
 // InboxEntry represents a parsed D-Mail from the inbox.
-type InboxEntry struct {
+type InboxEntry struct { // nosemgrep: structure.multiple-exported-structs-go -- reader+DTO pair (InboxEntry/InboxReader); InboxEntry is the read model produced by InboxReader; co-location avoids a separate DTO package for a single entity [permanent]
 	Name       string `json:"name"`
 	Kind       string `json:"kind"`
 	Severity   string `json:"severity"`

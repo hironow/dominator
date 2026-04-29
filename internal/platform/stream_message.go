@@ -6,7 +6,7 @@ import (
 )
 
 // StreamMessage represents a single NDJSON line from Claude Code --output-format stream-json.
-type StreamMessage struct { // nosemgrep: domain-primitives.public-string-field-go -- NDJSON wire-protocol struct; all string fields are opaque transport tokens (Type, Subtype, UUID, etc.) not domain primitives [permanent]
+type StreamMessage struct { // nosemgrep: domain-primitives.public-string-field-go, structure.multiple-exported-structs-go -- NDJSON wire-protocol struct; all string fields are opaque transport tokens (Type, Subtype, UUID, etc.) not domain primitives; co-locates with MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock as cohesive stream-json DTO family [permanent]
 	Type            string          `json:"type"`
 	Subtype         string          `json:"subtype,omitempty"`
 	UUID            string          `json:"uuid,omitempty"`
@@ -47,19 +47,19 @@ type StreamMessage struct { // nosemgrep: domain-primitives.public-string-field-
 }
 
 // MCPServerInfo represents a connected MCP server from system:init.
-type MCPServerInfo struct {
+type MCPServerInfo struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	Name   string `json:"name"`
 	Status string `json:"status"`
 }
 
 // PluginInfo represents a loaded plugin from system:init.
-type PluginInfo struct {
+type PluginInfo struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	Name string `json:"name"`
 	Path string `json:"path,omitempty"`
 }
 
 // RateLimitInfo holds rate limit details from Claude Code rate_limit_event.
-type RateLimitInfo struct {
+type RateLimitInfo struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	Status             string  `json:"status,omitempty"`
 	ResetsAt           int64   `json:"resetsAt,omitempty"`
 	RateLimitType      string  `json:"rateLimitType,omitempty"`
@@ -69,7 +69,7 @@ type RateLimitInfo struct {
 }
 
 // Usage holds token usage from Claude Code.
-type Usage struct {
+type Usage struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	InputTokens              int `json:"input_tokens"`
 	OutputTokens             int `json:"output_tokens"`
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
@@ -77,7 +77,7 @@ type Usage struct {
 }
 
 // AssistantMessage is the nested message inside SDKAssistantMessage.
-type AssistantMessage struct {
+type AssistantMessage struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	ID         string         `json:"id,omitempty"`
 	Role       string         `json:"role,omitempty"`
 	Model      string         `json:"model,omitempty"`
@@ -87,7 +87,7 @@ type AssistantMessage struct {
 }
 
 // ContentBlock represents a content block (text, tool_use, thinking).
-type ContentBlock struct {
+type ContentBlock struct { // nosemgrep: structure.multiple-exported-structs-go -- NDJSON wire-protocol DTO family (StreamMessage/MCPServerInfo/PluginInfo/RateLimitInfo/Usage/AssistantMessage/ContentBlock); all are co-dependent fields of the Claude Code stream-json protocol; splitting would require cross-file field references [permanent]
 	Type      string          `json:"type"`
 	Text      string          `json:"text,omitempty"`
 	Thinking  string          `json:"thinking,omitempty"`

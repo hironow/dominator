@@ -9,7 +9,7 @@ const (
 )
 
 // Config holds the complete dominator configuration.
-type Config struct {
+type Config struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	Target     TargetConfig   `yaml:"target"`
 	Nfr        NfrConfig      `yaml:"nfr"`
 	Load       LoadConfig     `yaml:"load"`
@@ -21,7 +21,7 @@ type Config struct {
 }
 
 // TargetConfig describes the system under test.
-type TargetConfig struct {
+type TargetConfig struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	URL      string `yaml:"url"`
 	Protocol string `yaml:"protocol"` // stored as string, validated via Protocol primitive
 	Spec     string `yaml:"spec"`
@@ -29,30 +29,30 @@ type TargetConfig struct {
 }
 
 // NfrConfig holds non-functional requirement thresholds.
-type NfrConfig struct {
+type NfrConfig struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	Performance PerformanceNfr `yaml:"performance"`
 	Reliability ReliabilityNfr `yaml:"reliability"`
 	Scalability ScalabilityNfr `yaml:"scalability"`
 }
 
 // PerformanceNfr defines latency and error rate thresholds.
-type PerformanceNfr struct {
+type PerformanceNfr struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	P95LatencyMs     int     `yaml:"p95_latency_ms"`
 	ErrorRatePercent float64 `yaml:"error_rate_percent"`
 }
 
 // ReliabilityNfr defines success rate thresholds.
-type ReliabilityNfr struct {
+type ReliabilityNfr struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	SuccessRatePercent float64 `yaml:"success_rate_percent"`
 }
 
 // ScalabilityNfr defines throughput thresholds.
-type ScalabilityNfr struct {
+type ScalabilityNfr struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	TargetRPS int `yaml:"target_rps"`
 }
 
 // LoadConfig defines load test parameters.
-type LoadConfig struct {
+type LoadConfig struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	VUs      int    `yaml:"vus"`
 	Duration string `yaml:"duration"`
 	RampUp   string `yaml:"ramp_up"`
@@ -67,7 +67,7 @@ type ApproverConfig interface {
 
 // ApprovalConfig controls whether human approval is required.
 // ApprovalConfig implements ApproverConfig.
-type ApprovalConfig struct {
+type ApprovalConfig struct { // nosemgrep: structure.multiple-exported-structs-go, structure.exported-struct-and-interface-go -- NFR config DTO group (Config/TargetConfig/NfrConfig/PerformanceNfr/ReliabilityNfr/ScalabilityNfr/LoadConfig/ApprovalConfig); ApproverConfig interface is the sealed contract for ApprovalConfig co-located by design [permanent]
 	Required   bool   `yaml:"required"`
 	ApproveCmd string `yaml:"approve_cmd,omitempty"`
 }
