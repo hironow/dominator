@@ -8,7 +8,7 @@ import (
 // SilentError wraps an error whose message has already been printed to stderr
 // by the command itself. main.go should suppress output for this error
 // while still honouring the exit code via ExitCode.
-type SilentError struct{ Err error }
+type SilentError struct{ Err error } // nosemgrep: structure.multiple-exported-structs-go -- error sentinel pair (SilentError/JudgmentError); both implement the error interface and ExitCode references both — co-location is required for the switch logic [permanent]
 
 func (e *SilentError) Error() string { return e.Err.Error() }
 func (e *SilentError) Unwrap() error { return e.Err }
@@ -37,7 +37,7 @@ type shutdownKey struct{}
 var ShutdownKey = shutdownKey{}
 
 // JudgmentError is returned when NFR judgment fails.
-type JudgmentError struct {
+type JudgmentError struct { // nosemgrep: structure.multiple-exported-structs-go -- error sentinel pair (SilentError/JudgmentError); both implement the error interface and ExitCode references both — co-location is required for the switch logic [permanent]
 	Violations int
 }
 

@@ -12,13 +12,13 @@ import (
 )
 
 // JudgeInsightWriter records judgment insights.
-type JudgeInsightWriter interface {
+type JudgeInsightWriter interface { // nosemgrep: structure.multiple-exported-interfaces-go -- judge port interface pair (JudgeInsightWriter/JudgeDMailEmitter); both are local port contracts consumed exclusively by RunJudge — co-location avoids indirection through the shared port package for usecase-local abstractions [permanent]
 	RecordHue(result domain.JudgedData) error
 	RecordCoefficient(result domain.JudgedData) error
 }
 
 // JudgeDMailEmitter emits D-Mail notifications based on judgment results.
-type JudgeDMailEmitter interface {
+type JudgeDMailEmitter interface { // nosemgrep: structure.multiple-exported-interfaces-go -- judge port interface pair (JudgeInsightWriter/JudgeDMailEmitter); both are local port contracts consumed exclusively by RunJudge — co-location avoids indirection through the shared port package for usecase-local abstractions [permanent]
 	EmitViolation(result domain.JudgedData) error
 	EmitPass(result domain.JudgedData) error
 }

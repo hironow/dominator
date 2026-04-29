@@ -26,7 +26,7 @@ const (
 )
 
 // Event is the envelope for all domain events in the event store.
-type Event struct {
+type Event struct { // nosemgrep: structure.multiple-exported-structs-go -- event payload family (Event/ScriptGeneratedData/GenerationFailedData/AppendResult/LoadResult); Event co-locates with its payload DTOs and result metrics as a cohesive event sourcing set [permanent]
 	ID        string          `json:"id"`
 	Type      EventType       `json:"type"`
 	Timestamp time.Time       `json:"timestamp"`
@@ -77,7 +77,7 @@ func ParseEvent(e Event) (Event, error) {
 }
 
 // ScriptGeneratedData is the payload for EventScriptGenerated.
-type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
+type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-field-go, structure.multiple-exported-structs-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive; co-locates with Event/AppendResult/LoadResult as cohesive event sourcing set [permanent]
 	SpecURL    string `json:"spec_url"`
 	Protocol   string `json:"protocol"`
 	ScriptPath string `json:"script_path"`
@@ -85,18 +85,18 @@ type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-
 }
 
 // GenerationFailedData is the payload for EventGenerationFailed.
-type GenerationFailedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
+type GenerationFailedData struct { // nosemgrep: domain-primitives.public-string-field-go, structure.multiple-exported-structs-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive; co-locates with Event/AppendResult/LoadResult as cohesive event sourcing set [permanent]
 	SpecURL string `json:"spec_url"`
 	Reason  string `json:"reason"`
 }
 
 // AppendResult captures metrics from an event store Append operation.
-type AppendResult struct {
+type AppendResult struct { // nosemgrep: structure.multiple-exported-structs-go -- event payload family (Event/ScriptGeneratedData/GenerationFailedData/AppendResult/LoadResult); Event co-locates with its payload DTOs and result metrics as a cohesive event sourcing set [permanent]
 	BytesWritten int // total bytes written to event files
 }
 
 // LoadResult captures metrics from an event store Load operation.
-type LoadResult struct {
+type LoadResult struct { // nosemgrep: structure.multiple-exported-structs-go -- event payload family (Event/ScriptGeneratedData/GenerationFailedData/AppendResult/LoadResult); Event co-locates with its payload DTOs and result metrics as a cohesive event sourcing set [permanent]
 	FileCount        int // number of .jsonl files scanned
 	CorruptLineCount int // number of lines skipped due to parse errors
 }

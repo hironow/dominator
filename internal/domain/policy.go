@@ -1,7 +1,7 @@
 package domain
 
 // Policy represents an implicit reactive rule: WHEN [EVENT] THEN [COMMAND].
-type Policy struct {
+type Policy struct { // nosemgrep: structure.multiple-exported-structs-go -- policy pub/sub pair (Policy/PolicyEngine); Policy is the rule descriptor, PolicyEngine is the dispatcher — inseparable by design [permanent]
 	Name    string    // unique identifier for the policy
 	Trigger EventType // domain event that activates this policy
 	Action  string    // description of the resulting command

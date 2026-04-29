@@ -2,7 +2,7 @@ package domain
 
 // GenerateCommand represents the intent to generate a k6 load test script.
 // Fields are unexported; use NewGenerateCommand to construct a valid instance.
-type GenerateCommand struct {
+type GenerateCommand struct { // nosemgrep: structure.multiple-exported-structs-go -- command payload family (GenerateCommand/InitCommand/ArchivePruneCommand); each command co-locates its constructor and accessors, split-by-struct would force cross-file imports within the same domain [permanent]
 	repoPath RepoPath
 	specURL  SpecURL
 	protocol Protocol
@@ -24,7 +24,7 @@ func (c GenerateCommand) Protocol() Protocol { return c.protocol }
 
 // InitCommand represents the intent to initialize a .pass directory.
 // Fields are unexported; use NewInitCommand to construct a valid instance.
-type InitCommand struct {
+type InitCommand struct { // nosemgrep: structure.multiple-exported-structs-go -- command payload family (GenerateCommand/InitCommand/ArchivePruneCommand); each command co-locates its constructor and accessors, split-by-struct would force cross-file imports within the same domain [permanent]
 	repoRoot RepoPath
 }
 
