@@ -25,7 +25,7 @@ type NfrDeviation struct {
 }
 
 // JudgedData holds the full judgment result.
-type JudgedData struct {
+type JudgedData struct { // nosemgrep: first-class-collection.raw-slice-field-domain-go -- JSON wire-format DTO; Deviations is a JSON array field in the serialized judgment result, FCC would break json.Marshal/Unmarshal contract [permanent]
 	PlanID     string         `json:"plan_id"`
 	ScriptPath string         `json:"script_path"`
 	Duration   string         `json:"duration"`
