@@ -59,7 +59,7 @@ func runInsights(cmd *cobra.Command, args []string) error {
 
 	output := struct {
 		Hue         []session.HueEntry         `json:"hue"`
-		Coefficient []session.CoefficientEntry  `json:"coefficient"`
+		Coefficient []session.CoefficientEntry `json:"coefficient"`
 	}{
 		Hue:         hueEntries,
 		Coefficient: coeffEntries,

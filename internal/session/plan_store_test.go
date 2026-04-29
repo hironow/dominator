@@ -412,12 +412,12 @@ func TestPlanStore_ListScripts_OnlyJS(t *testing.T) {
 	os.MkdirAll(k6Dir, 0o755)
 
 	files := map[string]bool{
-		"load.js":      true,
-		"stress.js":    true,
-		"spike.js":     true,
-		"README.md":    false,
-		"config.yaml":  false,
-		"helper.ts":    false,
+		"load.js":     true,
+		"stress.js":   true,
+		"spike.js":    true,
+		"README.md":   false,
+		"config.yaml": false,
+		"helper.ts":   false,
 	}
 	for name := range files {
 		os.WriteFile(filepath.Join(k6Dir, name), []byte("//"), 0o644)

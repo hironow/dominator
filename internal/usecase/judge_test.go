@@ -18,11 +18,11 @@ type fakePlanStore struct {
 	err  error
 }
 
-func (f *fakePlanStore) SavePlan(_ domain.Plan) error                       { return nil }
-func (f *fakePlanStore) LoadPlan(_ domain.PlanID) (*domain.Plan, error)     { return f.plan, f.err }
-func (f *fakePlanStore) LoadLatestPlan() (*domain.Plan, error)              { return f.plan, f.err }
-func (f *fakePlanStore) ApprovePlan(_ domain.PlanID) (*domain.Plan, error)  { return f.plan, f.err }
-func (f *fakePlanStore) ListScripts() ([]string, error)                     { return nil, nil }
+func (f *fakePlanStore) SavePlan(_ domain.Plan) error                      { return nil }
+func (f *fakePlanStore) LoadPlan(_ domain.PlanID) (*domain.Plan, error)    { return f.plan, f.err }
+func (f *fakePlanStore) LoadLatestPlan() (*domain.Plan, error)             { return f.plan, f.err }
+func (f *fakePlanStore) ApprovePlan(_ domain.PlanID) (*domain.Plan, error) { return f.plan, f.err }
+func (f *fakePlanStore) ListScripts() ([]string, error)                    { return nil, nil }
 
 type fakeK6Runner struct {
 	results domain.K6Results
@@ -165,7 +165,7 @@ func TestRunJudge_Violation(t *testing.T) {
 	}
 	planStore := &fakePlanStore{plan: plan}
 	k6Runner := &fakeK6Runner{results: domain.K6Results{
-		P95LatencyMs:     800,  // over threshold of 500
+		P95LatencyMs:     800, // over threshold of 500
 		ErrorRatePercent: 0.5,
 		SuccessRate:      99.5,
 		ActualRPS:        150,

@@ -6,7 +6,16 @@ import (
 	"context"
 	"database/sql"
 	"os/exec"
+
+	"github.com/hironow/dominator/internal/domain"
 )
+
+// SetConfigFieldForTest exposes setConfigField via value-return semantics for
+// white-box immutability tests. The wrapper passes the config by value and
+// returns the modified copy — this is the intended post-fix interface.
+func SetConfigFieldForTest(cfg domain.Config, key, value string) (domain.Config, error) {
+	return setConfigField(cfg, key, value)
+}
 
 // NewCmdApproverForTest creates a CmdApprover with a test command factory.
 func NewCmdApproverForTest(cmdTemplate string, factory func(ctx context.Context, name string, args ...string) *exec.Cmd) *CmdApprover {

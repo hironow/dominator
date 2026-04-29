@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func yamlMarshal(v any) ([]byte, error) { return yaml.Marshal(v) }
+func yamlMarshal(v any) ([]byte, error)      { return yaml.Marshal(v) }
 func yamlUnmarshal(data []byte, v any) error { return yaml.Unmarshal(data, v) }
 
 func TestDefaultConfig_HasReasonableDefaults(t *testing.T) {
@@ -105,9 +105,9 @@ func TestValidateConfig_AllInvalidCombinations(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		mutate   func(*domain.Config)
-		wantErr  string
+		name    string
+		mutate  func(*domain.Config)
+		wantErr string
 	}{
 		{
 			name:    "empty_model",

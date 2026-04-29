@@ -282,4 +282,3 @@ func TestExtractScriptContent_NoCodeBlock(t *testing.T) {
 		t.Errorf("extracted content = %q, want %q", scriptWriter.writtenContent, rawScript)
 	}
 }
-

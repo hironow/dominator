@@ -16,11 +16,11 @@ func TestNfrEvaluation_AllMetrics(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name           string
-		results        domain.K6Results
-		nfr            domain.NfrConfig
+		name            string
+		results         domain.K6Results
+		nfr             domain.NfrConfig
 		expectedVerdict domain.Verdict
-		expectedDevs   int
+		expectedDevs    int
 	}{
 		{
 			name: "all_pass",
@@ -36,7 +36,7 @@ func TestNfrEvaluation_AllMetrics(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictPass,
-			expectedDevs:   0,
+			expectedDevs:    0,
 		},
 		{
 			name: "latency_violation",
@@ -52,7 +52,7 @@ func TestNfrEvaluation_AllMetrics(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictViolation,
-			expectedDevs:   1,
+			expectedDevs:    1,
 		},
 		{
 			name: "all_violation",
@@ -68,7 +68,7 @@ func TestNfrEvaluation_AllMetrics(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictViolation,
-			expectedDevs:   4,
+			expectedDevs:    4,
 		},
 		{
 			name: "rps_violation_only",
@@ -84,7 +84,7 @@ func TestNfrEvaluation_AllMetrics(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictViolation,
-			expectedDevs:   1,
+			expectedDevs:    1,
 		},
 	}
 
@@ -113,11 +113,11 @@ func TestNfrEvaluation_EdgeCases(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name           string
-		results        domain.K6Results
-		nfr            domain.NfrConfig
+		name            string
+		results         domain.K6Results
+		nfr             domain.NfrConfig
 		expectedVerdict domain.Verdict
-		expectedDevs   int
+		expectedDevs    int
 	}{
 		{
 			name: "threshold_exactly_met",
@@ -133,7 +133,7 @@ func TestNfrEvaluation_EdgeCases(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictPass,
-			expectedDevs:   0,
+			expectedDevs:    0,
 		},
 		{
 			name: "zero_thresholds_pass",
@@ -149,7 +149,7 @@ func TestNfrEvaluation_EdgeCases(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 0},
 			},
 			expectedVerdict: domain.VerdictPass,
-			expectedDevs:   0,
+			expectedDevs:    0,
 		},
 		{
 			name: "zero_actual_values",
@@ -165,7 +165,7 @@ func TestNfrEvaluation_EdgeCases(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictPass,
-			expectedDevs:   0,
+			expectedDevs:    0,
 		},
 		{
 			name: "barely_over_threshold",
@@ -181,7 +181,7 @@ func TestNfrEvaluation_EdgeCases(t *testing.T) {
 				Scalability: domain.ScalabilityNfr{TargetRPS: 100},
 			},
 			expectedVerdict: domain.VerdictViolation,
-			expectedDevs:   1,
+			expectedDevs:    1,
 		},
 	}
 
