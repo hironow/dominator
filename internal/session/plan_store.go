@@ -164,25 +164,33 @@ func setConfigField(cfg domain.Config, key, value string) (domain.Config, error)
 		if err != nil {
 			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		cfg.Nfr.Performance.P95LatencyMs = v
+		perf := cfg.Nfr.Performance
+		perf.P95LatencyMs = v
+		cfg.Nfr.Performance = perf
 	case "nfr.performance.error_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return domain.Config{}, fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		cfg.Nfr.Performance.ErrorRatePercent = v
+		perf := cfg.Nfr.Performance
+		perf.ErrorRatePercent = v
+		cfg.Nfr.Performance = perf
 	case "nfr.reliability.success_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return domain.Config{}, fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		cfg.Nfr.Reliability.SuccessRatePercent = v
+		rel := cfg.Nfr.Reliability
+		rel.SuccessRatePercent = v
+		cfg.Nfr.Reliability = rel
 	case "nfr.scalability.target_rps":
 		v, err := strconv.Atoi(value)
 		if err != nil {
 			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		cfg.Nfr.Scalability.TargetRPS = v
+		scal := cfg.Nfr.Scalability
+		scal.TargetRPS = v
+		cfg.Nfr.Scalability = scal
 	case "load.vus":
 		v, err := strconv.Atoi(value)
 		if err != nil {
