@@ -139,14 +139,17 @@ func UpdateConfig(stateDir, key, value string) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
-	if err := setConfigField(&cfg, key, value); err != nil {
+	updated, err := setConfigField(cfg, key, value)
+	if err != nil {
 		return err
 	}
-	return SaveConfig(cfgPath, cfg)
+	return SaveConfig(cfgPath, updated)
 }
 
 // setConfigField sets a single field on cfg identified by a dotted key.
-func setConfigField(cfg *domain.Config, key, value string) error {
+// It accepts cfg by value and returns a modified copy, preserving referential
+// transparency and avoiding hidden mutation of the caller's data.
+func setConfigField(cfg domain.Config, key, value string) (domain.Config, error) {
 	switch key {
 	case "target.url":
 		cfg.Target.URL = value
@@ -159,35 +162,31 @@ func setConfigField(cfg *domain.Config, key, value string) error {
 	case "nfr.performance.p95_latency_ms":
 		v, err := strconv.Atoi(value)
 		if err != nil {
-			return fmt.Errorf("invalid integer for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		perf := &cfg.Nfr.Performance
-		perf.P95LatencyMs = v
+		cfg.Nfr.Performance.P95LatencyMs = v
 	case "nfr.performance.error_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return fmt.Errorf("invalid float for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		perf := &cfg.Nfr.Performance
-		perf.ErrorRatePercent = v
+		cfg.Nfr.Performance.ErrorRatePercent = v
 	case "nfr.reliability.success_rate_percent":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return fmt.Errorf("invalid float for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid float for %s: %w", key, err)
 		}
-		rel := &cfg.Nfr.Reliability
-		rel.SuccessRatePercent = v
+		cfg.Nfr.Reliability.SuccessRatePercent = v
 	case "nfr.scalability.target_rps":
 		v, err := strconv.Atoi(value)
 		if err != nil {
-			return fmt.Errorf("invalid integer for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
-		scal := &cfg.Nfr.Scalability
-		scal.TargetRPS = v
+		cfg.Nfr.Scalability.TargetRPS = v
 	case "load.vus":
 		v, err := strconv.Atoi(value)
 		if err != nil {
-			return fmt.Errorf("invalid integer for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
 		cfg.Load.VUs = v
 	case "load.duration":
@@ -197,7 +196,7 @@ func setConfigField(cfg *domain.Config, key, value string) error {
 	case "approval.required":
 		v, err := strconv.ParseBool(value)
 		if err != nil {
-			return fmt.Errorf("invalid boolean for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid boolean for %s: %w", key, err)
 		}
 		cfg.Approval.Required = v
 	case "lang":
@@ -209,13 +208,13 @@ func setConfigField(cfg *domain.Config, key, value string) error {
 	case "timeout_sec":
 		v, err := strconv.Atoi(value)
 		if err != nil {
-			return fmt.Errorf("invalid integer for %s: %w", key, err)
+			return domain.Config{}, fmt.Errorf("invalid integer for %s: %w", key, err)
 		}
 		cfg.TimeoutSec = v
 	default:
-		return fmt.Errorf("unknown config key: %s", key)
+		return domain.Config{}, fmt.Errorf("unknown config key: %s", key)
 	}
-	return nil
+	return cfg, nil
 }
 
 // ShowConfig loads and returns the config as YAML bytes.
