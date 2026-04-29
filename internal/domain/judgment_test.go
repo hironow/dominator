@@ -258,12 +258,12 @@ func TestEvaluateNfr_AllCombinations(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		results        domain.K6Results
-		nfr            domain.NfrConfig
-		wantVerdict    domain.Verdict
-		wantMetrics    []string
-		wantDevCount   int
+		name         string
+		results      domain.K6Results
+		nfr          domain.NfrConfig
+		wantVerdict  domain.Verdict
+		wantMetrics  []string
+		wantDevCount int
 	}{
 		{
 			name: "only_p95_latency_violation",

@@ -72,11 +72,11 @@ var (
 )
 
 var opFromTool = map[string]string{
-	"paintress":  "expedition",
-	"amadeus":    "divergence",
-	"sightjack":  "wave",
-	"phonewave":  "dmail",
-	"dominator":  "judgment",
+	"paintress": "expedition",
+	"amadeus":   "divergence",
+	"sightjack": "wave",
+	"phonewave": "dmail",
+	"dominator": "judgment",
 }
 
 // ExtractMeta populates a domain.IndexEntry from a markdown file, extracting

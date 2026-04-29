@@ -338,13 +338,13 @@ func TestEventTypeConstants(t *testing.T) {
 	t.Parallel()
 
 	expected := map[domain.EventType]string{
-		domain.EventScriptGenerated:  "script.generated",
-		domain.EventGenerationFailed: "generation.failed",
-		domain.EventPlanCreated:      "plan.created",
-		domain.EventPlanApproved:     "plan.approved",
-		domain.EventJudged:           "judged",
+		domain.EventScriptGenerated:   "script.generated",
+		domain.EventGenerationFailed:  "generation.failed",
+		domain.EventPlanCreated:       "plan.created",
+		domain.EventPlanApproved:      "plan.approved",
+		domain.EventJudged:            "judged",
 		domain.EventViolationDetected: "violation.detected",
-		domain.EventPassConfirmed:    "pass.confirmed",
+		domain.EventPassConfirmed:     "pass.confirmed",
 	}
 	for et, want := range expected {
 		if string(et) != want {
