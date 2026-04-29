@@ -54,23 +54,6 @@ func NewEvent(eventType EventType, data any, timestamp time.Time) (Event, error)
 // the Parse-Don't-Validate principle: callers receive a type-level guarantee
 // that the returned Event is well-formed.
 func ParseEvent(e Event) (Event, error) {
-	if err := validateEvent(e); err != nil {
-		return Event{}, err
-	}
-	return e, nil
-}
-
-// ValidateEvent checks that an Event has all required fields populated.
-// Returns an error describing all validation failures.
-//
-// Deprecated: prefer ParseEvent which follows the Parse-Don't-Validate pattern.
-func ValidateEvent(e Event) error {
-	return validateEvent(e)
-}
-
-// validateEvent is the internal validation implementation shared by ParseEvent
-// and ValidateEvent.
-func validateEvent(e Event) error {
 	var errs []string
 	if e.ID == "" {
 		errs = append(errs, "ID is required")
@@ -88,9 +71,9 @@ func validateEvent(e Event) error {
 		errs = append(errs, "Data must not be empty")
 	}
 	if len(errs) > 0 {
-		return errors.New("invalid event: " + strings.Join(errs, "; "))
+		return Event{}, errors.New("invalid event: " + strings.Join(errs, "; "))
 	}
-	return nil
+	return e, nil
 }
 
 // ScriptGeneratedData is the payload for EventScriptGenerated.
