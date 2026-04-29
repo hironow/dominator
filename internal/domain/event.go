@@ -49,9 +49,11 @@ func NewEvent(eventType EventType, data any, timestamp time.Time) (Event, error)
 	}, nil
 }
 
-// ValidateEvent checks that an Event has all required fields populated.
-// Returns an error describing all validation failures.
-func ValidateEvent(e Event) error {
+// ParseEvent validates that an Event has all required fields populated and
+// returns the event unchanged when valid. The (Event, error) signature follows
+// the Parse-Don't-Validate principle: callers receive a type-level guarantee
+// that the returned Event is well-formed.
+func ParseEvent(e Event) (Event, error) {
 	var errs []string
 	if e.ID == "" {
 		errs = append(errs, "ID is required")
@@ -69,13 +71,13 @@ func ValidateEvent(e Event) error {
 		errs = append(errs, "Data must not be empty")
 	}
 	if len(errs) > 0 {
-		return errors.New("invalid event: " + strings.Join(errs, "; "))
+		return Event{}, errors.New("invalid event: " + strings.Join(errs, "; "))
 	}
-	return nil
+	return e, nil
 }
 
 // ScriptGeneratedData is the payload for EventScriptGenerated.
-type ScriptGeneratedData struct {
+type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
 	SpecURL    string `json:"spec_url"`
 	Protocol   string `json:"protocol"`
 	ScriptPath string `json:"script_path"`
@@ -83,7 +85,7 @@ type ScriptGeneratedData struct {
 }
 
 // GenerationFailedData is the payload for EventGenerationFailed.
-type GenerationFailedData struct {
+type GenerationFailedData struct { // nosemgrep: domain-primitives.public-string-field-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive [permanent]
 	SpecURL string `json:"spec_url"`
 	Reason  string `json:"reason"`
 }

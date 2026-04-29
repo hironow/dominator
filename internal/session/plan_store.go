@@ -133,7 +133,7 @@ func (s *PlanStore) ListScripts() ([]string, error) {
 
 // UpdateConfig loads the config at stateDir, sets a single key to the given
 // value, and saves it back. Returns an error for unknown keys or invalid values.
-func UpdateConfig(stateDir, key, value string) error {
+func UpdateConfig(stateDir, key, value string) error { // nosemgrep: domain-primitives.multiple-string-params-go -- stateDir/key/value are semantically distinct: a path, a config key name, and a config value; swapping them causes failures caught by tests [permanent]
 	cfgPath := filepath.Join(stateDir, domain.ConfigFile)
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {

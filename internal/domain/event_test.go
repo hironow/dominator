@@ -99,7 +99,7 @@ func TestNewEvent_UniqueIDs(t *testing.T) {
 	}
 }
 
-func TestValidateEvent_Valid(t *testing.T) {
+func TestParseEvent_Valid(t *testing.T) {
 	t.Parallel()
 
 	data := domain.ScriptGeneratedData{SpecURL: "https://example.com"}
@@ -107,16 +107,16 @@ func TestValidateEvent_Valid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if err := domain.ValidateEvent(ev); err != nil {
+	if _, err := domain.ParseEvent(ev); err != nil {
 		t.Errorf("expected valid event, got %v", err)
 	}
 }
 
-func TestValidateEvent_MissingFields(t *testing.T) {
+func TestParseEvent_MissingFields(t *testing.T) {
 	t.Parallel()
 
 	ev := domain.Event{}
-	err := domain.ValidateEvent(ev)
+	_, err := domain.ParseEvent(ev)
 	if err == nil {
 		t.Error("expected error for empty event")
 	}
@@ -261,7 +261,7 @@ func TestNewEvent_WithNilData(t *testing.T) {
 	}
 }
 
-func TestValidateEvent_IndividualFields(t *testing.T) {
+func TestParseEvent_IndividualFields(t *testing.T) {
 	t.Parallel()
 
 	now := time.Now()
@@ -303,7 +303,7 @@ func TestValidateEvent_IndividualFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ev := validEvent // copy
 			tt.mutate(&ev)
-			err := domain.ValidateEvent(ev)
+			_, err := domain.ParseEvent(ev)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -321,6 +321,43 @@ func containsStr(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestParseEvent_ValidReturnsEvent verifies that ParseEvent returns the event
+// unchanged when all required fields are populated (Parse-Don't-Validate).
+func TestParseEvent_ValidReturnsEvent(t *testing.T) {
+	t.Parallel()
+
+	data := domain.ScriptGeneratedData{SpecURL: "https://example.com"}
+	ev, err := domain.NewEvent(domain.EventScriptGenerated, data, time.Now())
+	if err != nil {
+		t.Fatalf("NewEvent: %v", err)
+	}
+
+	// when
+	parsed, err := domain.ParseEvent(ev)
+
+	// then
+	if err != nil {
+		t.Errorf("ParseEvent valid event: got error %v", err)
+	}
+	if parsed.ID != ev.ID {
+		t.Errorf("ParseEvent: ID = %q, want %q", parsed.ID, ev.ID)
+	}
+}
+
+// TestParseEvent_InvalidReturnsError verifies that ParseEvent returns a zero
+// value and an error when required fields are missing.
+func TestParseEvent_InvalidReturnsError(t *testing.T) {
+	t.Parallel()
+
+	// when
+	_, err := domain.ParseEvent(domain.Event{}) // zero value, all fields missing
+
+	// then
+	if err == nil {
+		t.Error("ParseEvent zero-value event: expected error, got nil")
+	}
 }
 
 func TestNewEvent_ErrorOnUnmarshalableData(t *testing.T) {
