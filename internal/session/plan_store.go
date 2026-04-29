@@ -82,9 +82,14 @@ func (s *PlanStore) LoadLatestPlan() (*domain.Plan, error) {
 	}
 
 	// Sort by modification time, newest first.
+	// If Info() fails for a file (e.g., deleted between ReadDir and Info),
+	// treat it as zero time so it sorts to the end rather than panicking.
 	sort.Slice(jsonFiles, func(i, j int) bool {
-		infoI, _ := jsonFiles[i].Info()
-		infoJ, _ := jsonFiles[j].Info()
+		infoI, errI := jsonFiles[i].Info()
+		infoJ, errJ := jsonFiles[j].Info()
+		if errI != nil || errJ != nil {
+			return errI == nil // files with Info errors sort last
+		}
 		return infoI.ModTime().After(infoJ.ModTime())
 	})
 
