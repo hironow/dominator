@@ -62,15 +62,15 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse protocol first (needed for flag validation)
-	protocolRaw, _ := cmd.Flags().GetString("protocol")
+	protocolRaw, _ := cmd.Flags().GetString("protocol") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 	protocol, err := domain.NewProtocol(protocolRaw)
 	if err != nil {
 		return err
 	}
 
 	// Protocol-specific flag validation
-	specRaw, _ := cmd.Flags().GetString("spec")
-	docsRaw, _ := cmd.Flags().GetString("docs")
+	specRaw, _ := cmd.Flags().GetString("spec") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
+	docsRaw, _ := cmd.Flags().GetString("docs") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 
 	switch protocol.String() {
 	case "http":

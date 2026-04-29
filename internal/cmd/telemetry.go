@@ -39,7 +39,7 @@ func initTracer(serviceName, ver string) func(context.Context) error {
 		return func(context.Context) error { return nil }
 	}
 
-	res, _ := resource.Merge(
+	res, _ := resource.Merge( // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- resource.Merge errors only on conflicting schema URLs; result is always valid (non-nil) per OTel SDK contract [permanent]
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
@@ -49,7 +49,7 @@ func initTracer(serviceName, ver string) func(context.Context) error {
 	)
 
 	if entity := os.Getenv("WANDB_ENTITY"); entity != "" {
-		res, _ = resource.Merge(res, resource.NewWithAttributes(
+		res, _ = resource.Merge(res, resource.NewWithAttributes( // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- resource.Merge errors only on conflicting schema URLs; result is always valid (non-nil) per OTel SDK contract [permanent]
 			semconv.SchemaURL,
 			attribute.String("wandb.entity", platform.SanitizeUTF8(entity)),
 			attribute.String("wandb.project", platform.SanitizeUTF8(os.Getenv("WANDB_PROJECT"))),
@@ -99,7 +99,7 @@ func initMeter(serviceName, ver string) func(context.Context) error {
 		return func(context.Context) error { return nil }
 	}
 
-	res, _ := resource.Merge(
+	res, _ := resource.Merge( // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- resource.Merge errors only on conflicting schema URLs; result is always valid (non-nil) per OTel SDK contract [permanent]
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,

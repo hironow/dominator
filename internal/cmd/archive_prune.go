@@ -36,10 +36,10 @@ Pass --execute to actually remove the files.`,
   dominator archive-prune --rebuild-index`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			days, _ := cmd.Flags().GetInt("days")
-			execute, _ := cmd.Flags().GetBool("execute")
+			days, _ := cmd.Flags().GetInt("days")           // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetInt cannot fail at runtime [permanent]
+			execute, _ := cmd.Flags().GetBool("execute")    // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			dryRunExplicit := cmd.Flags().Changed("dry-run")
-			yes, _ := cmd.Flags().GetBool("yes")
+			yes, _ := cmd.Flags().GetBool("yes")            // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			logger := platform.NewLogger(cmd.ErrOrStderr(), false)
 
 			if execute && dryRunExplicit {
@@ -51,7 +51,7 @@ Pass --execute to actually remove the files.`,
 				return err
 			}
 
-			rebuildIndex, _ := cmd.Flags().GetBool("rebuild-index")
+			rebuildIndex, _ := cmd.Flags().GetBool("rebuild-index") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			stateDir := filepath.Join(repoRoot, domain.StateDir)
 			if rebuildIndex {
 				if execute || dryRunExplicit {
