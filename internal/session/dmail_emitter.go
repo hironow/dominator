@@ -24,7 +24,9 @@ func (e *DMailEmitter) outboxDir() string {
 
 // EmitViolation creates 3 D-Mail files for NFR violations:
 // design-feedback (Sightjack), implementation-feedback (Paintress),
-// verification-feedback (Amadeus).
+// and report (Amadeus context). All three kinds are canonical D-Mail v1
+// kinds; the Rival Contract v1 protocol forbids the non-canonical
+// 'verification-feedback' kind because strict routing validators reject it.
 func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 	dir := e.outboxDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -40,7 +42,7 @@ func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 	}{
 		{"design-feedback", "NFR violation detected — design review recommended"},
 		{"implementation-feedback", "NFR violation detected — implementation review recommended"},
-		{"verification-feedback", "NFR violation detected — verification review recommended"},
+		{"report", "NFR violation detected — verifier context for amadeus"},
 	}
 
 	for _, t := range targets {
