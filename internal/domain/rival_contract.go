@@ -293,6 +293,68 @@ func EvidenceItemsToNfrConfig(items []EvidenceItem) NfrConfig {
 	return cfg
 }
 
+// requiredContractNfrKeys is the minimum set of `nfr.*` keys a Rival
+// Contract v1 must declare to drive a deterministic load test. The
+// canonical list is intentionally short: only `nfr.p95_latency_ms` is
+// strictly required because every load-testable surface needs at least
+// one latency budget. The other three keys (error_rate_percent,
+// success_rate_percent, target_rps) fall back to config defaults when
+// absent because they are commonly omitted for early-stage contracts and
+// have safe global defaults in DefaultConfig().
+var requiredContractNfrKeys = []string{"nfr.p95_latency_ms"}
+
+// MergeContractNfrIntoConfig merges the NFR thresholds parsed from a
+// Rival Contract v1 body's Evidence section onto a base NfrConfig. The
+// merge is conservative:
+//
+//   - For each supported `nfr.*` key present in the contract, the
+//     contract value overrides the corresponding base field.
+//   - Any field that is absent from the contract retains its base value
+//     so callers can pass DefaultConfig().Nfr as base and still get
+//     reasonable thresholds for fields the contract did not specify.
+//   - The returned `missing` slice lists every required key that did not
+//     appear in the contract. Callers use this to decide whether to emit
+//     a design-feedback D-Mail asking the contract author for the
+//     missing thresholds rather than silently inventing them.
+//
+// MergeContractNfrIntoConfig is pure: no I/O, no LLM, no telemetry.
+func MergeContractNfrIntoConfig(base NfrConfig, contract RivalContract) (NfrConfig, []string) {
+	items := ParseEvidenceItems(contract.Evidence)
+	present := make(map[string]struct{}, len(items))
+	merged := base
+	for _, item := range items {
+		switch item.Key {
+		case "nfr.p95_latency_ms":
+			if v, err := strconv.Atoi(item.Value); err == nil {
+				merged.Performance.P95LatencyMs = v
+				present[item.Key] = struct{}{}
+			}
+		case "nfr.error_rate_percent":
+			if v, err := strconv.ParseFloat(item.Value, 64); err == nil {
+				merged.Performance.ErrorRatePercent = v
+				present[item.Key] = struct{}{}
+			}
+		case "nfr.success_rate_percent":
+			if v, err := strconv.ParseFloat(item.Value, 64); err == nil {
+				merged.Reliability.SuccessRatePercent = v
+				present[item.Key] = struct{}{}
+			}
+		case "nfr.target_rps":
+			if v, err := strconv.Atoi(item.Value); err == nil {
+				merged.Scalability.TargetRPS = v
+				present[item.Key] = struct{}{}
+			}
+		}
+	}
+	var missing []string
+	for _, key := range requiredContractNfrKeys {
+		if _, ok := present[key]; !ok {
+			missing = append(missing, key)
+		}
+	}
+	return merged, missing
+}
+
 // extractContractTitle returns the title text of the first `# Contract:`
 // heading. The heading must be the first level-1 heading; otherwise the
 // body is treated as legacy.

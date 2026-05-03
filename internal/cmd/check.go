@@ -42,6 +42,8 @@ output to stdout for piping to other tools.`,
 			planStore := &session.PlanStore{StateDir: stateDir}
 			configLoader := &session.FileConfigLoader{}
 			eventStore := session.NewEventStore(stateDir, logger)
+			contractReader := &session.InboxContractReader{StateDir: stateDir, Logger: logger}
+			dmailEmitter := &session.DMailEmitter{StateDir: stateDir, Logger: logger}
 
 			plan, err := usecase.RunCheck(
 				cmd.Context(),
@@ -49,6 +51,8 @@ output to stdout for piping to other tools.`,
 				planStore,
 				configLoader,
 				eventStore,
+				contractReader,
+				dmailEmitter,
 				logger,
 			)
 			if err != nil {
