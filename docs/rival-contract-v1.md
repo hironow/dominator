@@ -208,3 +208,60 @@ parity in dom's `internal/domain/` package.
 Legacy v1 D-Mails (no `domain_style` key) parse identically and produce
 a bit-identical `NfrConfig` and design-feedback body. The v1.1 parser
 update is structural-only from dominator's perspective.
+
+## v1.2 additions — integration test coverage
+
+Rival Contract v1.2 is a test-only minor revision. The schema name
+remains `rival-contract-v1` and no production code path changed.
+dominator gains consumer-side cross-tool round-trip integration coverage
+that parses the SAME canonical-spec D-Mail bytes that sightjack's real
+producer emits.
+
+Plan: [`refs/plans/2026-05-03-rival-contract-v1-2-integration-e2e.md`](../../refs/plans/2026-05-03-rival-contract-v1-2-integration-e2e.md).
+
+### Consumer round-trip integration
+
+`tests/integration/rival_contract_roundtrip_test.go` lives in package
+`integration_test` under the `//go:build integration` build tag. It
+reads three committed fixtures and exercises dominator's parser
+end-to-end through the public `internal/domain` surface (black-box):
+
+| Fixture | Asserts |
+|---|---|
+| `tests/integration/testdata/rival/canonical-spec-v1.md` | byte-identical copy of sj's produced `canonical-spec-v1.md`; dom parses it via `ParseRivalContractBody` + `ParseRivalContractMetadata` and the result matches the canonical Go struct expectation |
+| `tests/integration/testdata/rival/legacy-spec.md` | legacy v1 (no `domain_style`) gracefully parses without rejecting metadata |
+| `tests/integration/testdata/rival/event-sourced-v1.md` | a v1.1 D-Mail with `metadata.domain_style: event-sourced` parses correctly |
+
+Three integration tests total. A regression in sj's `ComposeSpecification`
+breaks dominator's roundtrip test; a regression in dom's parser breaks
+the same test. Cross-tool drift is caught either way.
+
+### NFR path is NOT exercised by v1.2 round-trip
+
+`EvidenceItemsToNfrConfig` and `MergeContractNfrIntoConfig` are NOT part
+of v1.2's cross-tool round-trip. The fixture set covers general parser
+parity only — the NFR-specific code paths already have full unit
+coverage in `internal/domain/` and `internal/usecase/`. v1.2 explicitly
+chose general parser parity over NFR-specific cases because the
+canonical-spec fixture is shared verbatim across all four tools, and
+the NFR projection is dominator-specific.
+
+### Canonical fixture sync (gap-check)
+
+`refs/scripts/check_rival_canonical_fixture.sh` (added in v1.2 and
+wired into `just gap-check-rival-contract`) verifies that dominator's
+three fixtures are byte-identical to sightjack's source-of-truth copies
+under `sightjack/tests/integration/testdata/rival/`. Drift between
+producer and consumer fixtures fails the gap-check before merge.
+
+### What did NOT change
+
+- Schema (still `rival-contract-v1`; v1 invariants 1-13 maintained).
+- The four supported `nfr.*` keys
+  (`p95_latency_ms`, `error_rate_percent`, `success_rate_percent`,
+  `target_rps`).
+- The missing-threshold design-feedback emission rule.
+- `EvidenceItemsToNfrConfig` and `MergeContractNfrIntoConfig`.
+- Any production code path or k6 scenario generation.
+
+v1.2 is purely additive test code and gap-check guards.
