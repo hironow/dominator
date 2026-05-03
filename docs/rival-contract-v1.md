@@ -150,3 +150,61 @@ are documentation for humans and amadeus.
 
 - [`refs/plans/2026-05-03-rival-contract-v1.md`](../../refs/plans/2026-05-03-rival-contract-v1.md) — full design, phase plan, risks
 - [`refs/scripts/check_rival_contract_docs.sh`](../../refs/scripts/check_rival_contract_docs.sh) — gap-check enforcement
+
+## v1.1 additions
+
+Rival Contract v1.1 is a purely additive minor extension. The schema name
+remains `rival-contract-v1`. dominator gains a parser-only update that
+accepts the new optional `metadata.domain_style` key for parity with the
+other three tools. The NFR judge codepath is otherwise unchanged.
+
+Plan: [`refs/plans/2026-05-03-rival-contract-v1-1-extensions.md`](../../refs/plans/2026-05-03-rival-contract-v1-1-extensions.md).
+
+### `metadata.domain_style` accepted by the parser
+
+`ParseRivalContractMetadata` (in `internal/domain/rival_contract.go`)
+accepts an OPTIONAL `domain_style` key with exactly three enumerated
+values: `event-sourced`, `generic`, `mixed`. Unknown values are rejected.
+A missing key parses as the empty string. Adding the key keeps
+dominator's parser bit-compatible with the v1 archive while staying
+in-sync with sj/pt/am parsers.
+
+The parser never infers `domain_style` from ADRs, environment variables,
+or any other side channel. The metadata map is the only signal.
+
+### NFR codepath UNCHANGED
+
+dominator only acts on `## Evidence`. The `## Domain` section — the only
+section whose authoring style is hinted by `domain_style` — is not read
+by `EvidenceItemsToNfrConfig` or `MergeContractNfrIntoConfig`. As a
+result, the NFR judge produces bit-identical output for legacy v1
+D-Mails and for v1.1 D-Mails carrying any `domain_style` value.
+
+The four supported `nfr.*` keys (`p95_latency_ms`, `error_rate_percent`,
+`success_rate_percent`, `target_rps`) and the missing-threshold
+design-feedback emission rule are unchanged.
+
+### What dominator does NOT do
+
+- dominator never SETS `domain_style`. The producer (sightjack) is the
+  only writer.
+- dominator does not invoke the producer-side REASONS Canvas export
+  subcommand. That projection is a sightjack-only tool; the NFR judge
+  has no need for it.
+- dominator does not branch on `domain_style` in any of its prompts,
+  feedback bodies, or k6 scenario generation. The hint is irrelevant to
+  NFR judgment.
+
+### Why the parser still needed an update
+
+Cross-tool parity. All four tool parsers must accept and reject the same
+`metadata.domain_style` shape so that a contract that round-trips
+through dominator (e.g. archived and replayed) does not gain or lose the
+key. The `TestParseRivalContractMetadata_DomainStyle*` tests enforce this
+parity in dom's `internal/domain/` package.
+
+### Backward compatibility
+
+Legacy v1 D-Mails (no `domain_style` key) parse identically and produce
+a bit-identical `NfrConfig` and design-feedback body. The v1.1 parser
+update is structural-only from dominator's perspective.
