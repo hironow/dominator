@@ -7,6 +7,7 @@
 - [policies.md](policies.md) — Event -> Policy mapping (WHEN event THEN command)
 - [otel-backends.md](otel-backends.md) — OpenTelemetry backend configuration (Jaeger, Weave)
 - [dmail-protocol-conventions.md](dmail-protocol-conventions.md) — D-Mail filename uniqueness and archive retention conventions
+- [rival-contract-v1.md](rival-contract-v1.md) — Rival Contract v1 (dominator as NFR judge; Evidence -> NfrConfig)
 - [stdio-convention.md](stdio-convention.md) — stdin/stdout/stderr convention
 - [testing.md](testing.md) — Test strategy and conventions
 
