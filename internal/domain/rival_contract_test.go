@@ -223,6 +223,182 @@ func TestEvidenceItemsToNfrConfig_IgnoresUnknownNfrKeys(t *testing.T) {
 	}
 }
 
+// TestParseNfrEvidence_MapsToNfrConfig is the production-path mirror of
+// TestEvidenceItemsToNfrConfig_MapsSupportedThresholds: it parses raw
+// Evidence text via the same code path that production callers exercise
+// (ParseEvidenceItems -> EvidenceItemsToNfrConfig) and asserts that all
+// four supported nfr.* keys land on the right NfrConfig fields.
+//
+// Phase 4 (Rival Contract v1) requires that NFR thresholds parsed from a
+// contract become the plan thresholds; this test pins the parser+mapper
+// pair end-to-end so that wiring layers above can rely on the contract
+// being a single source of truth for NFR thresholds.
+func TestParseNfrEvidence_MapsToNfrConfig(t *testing.T) {
+	// given: an Evidence section with all four supported nfr.* keys
+	evidence := strings.Join([]string{
+		"- nfr.p95_latency_ms: <= 250",
+		"- nfr.error_rate_percent: <= 0.5",
+		"- nfr.success_rate_percent: >= 99.9",
+		"- nfr.target_rps: >= 150",
+	}, "\n")
+
+	// when
+	items := domain.ParseEvidenceItems(evidence)
+	cfg := domain.EvidenceItemsToNfrConfig(items)
+
+	// then
+	if cfg.Performance.P95LatencyMs != 250 {
+		t.Errorf("Performance.P95LatencyMs: got %d want 250", cfg.Performance.P95LatencyMs)
+	}
+	if cfg.Performance.ErrorRatePercent != 0.5 {
+		t.Errorf("Performance.ErrorRatePercent: got %v want 0.5", cfg.Performance.ErrorRatePercent)
+	}
+	if cfg.Reliability.SuccessRatePercent != 99.9 {
+		t.Errorf("Reliability.SuccessRatePercent: got %v want 99.9", cfg.Reliability.SuccessRatePercent)
+	}
+	if cfg.Scalability.TargetRPS != 150 {
+		t.Errorf("Scalability.TargetRPS: got %d want 150", cfg.Scalability.TargetRPS)
+	}
+}
+
+// TestParseNfrEvidence_UnknownKeysIgnored is the production-path mirror of
+// TestEvidenceItemsToNfrConfig_IgnoresUnknownNfrKeys: it confirms the
+// parser-then-mapper pipeline drops unknown nfr.* keys silently and never
+// produces invented thresholds.
+func TestParseNfrEvidence_UnknownKeysIgnored(t *testing.T) {
+	// given: Evidence with one supported and several unsupported keys
+	evidence := strings.Join([]string{
+		"- nfr.p95_latency_ms: <= 180",
+		"- nfr.unknown_metric: <= 99",
+		"- check: just check",
+		"- test: just test",
+		"- arbitrary prose without colon",
+	}, "\n")
+
+	// when
+	items := domain.ParseEvidenceItems(evidence)
+	cfg := domain.EvidenceItemsToNfrConfig(items)
+
+	// then: only the supported key takes effect
+	if cfg.Performance.P95LatencyMs != 180 {
+		t.Errorf("Performance.P95LatencyMs: got %d want 180", cfg.Performance.P95LatencyMs)
+	}
+	if cfg.Performance.ErrorRatePercent != 0 {
+		t.Errorf("Performance.ErrorRatePercent: got %v want 0 (unset)", cfg.Performance.ErrorRatePercent)
+	}
+	if cfg.Reliability.SuccessRatePercent != 0 {
+		t.Errorf("Reliability.SuccessRatePercent: got %v want 0 (unset)", cfg.Reliability.SuccessRatePercent)
+	}
+	if cfg.Scalability.TargetRPS != 0 {
+		t.Errorf("Scalability.TargetRPS: got %d want 0 (unset)", cfg.Scalability.TargetRPS)
+	}
+}
+
+func TestMergeContractNfrIntoConfig_OverridesDefaults(t *testing.T) {
+	// given: a base config with default thresholds and a contract with
+	// concrete nfr.* evidence
+	base := domain.NfrConfig{
+		Performance: domain.PerformanceNfr{P95LatencyMs: 500, ErrorRatePercent: 1.0},
+		Reliability: domain.ReliabilityNfr{SuccessRatePercent: 99.0},
+		Scalability: domain.ScalabilityNfr{TargetRPS: 100},
+	}
+	contract := domain.RivalContract{
+		Evidence: strings.Join([]string{
+			"- nfr.p95_latency_ms: <= 250",
+			"- nfr.error_rate_percent: <= 0.5",
+			"- nfr.success_rate_percent: >= 99.9",
+			"- nfr.target_rps: >= 200",
+		}, "\n"),
+	}
+
+	// when
+	merged, missing := domain.MergeContractNfrIntoConfig(base, contract)
+
+	// then: contract values override base defaults
+	if merged.Performance.P95LatencyMs != 250 {
+		t.Errorf("P95LatencyMs: got %d want 250", merged.Performance.P95LatencyMs)
+	}
+	if merged.Performance.ErrorRatePercent != 0.5 {
+		t.Errorf("ErrorRatePercent: got %v want 0.5", merged.Performance.ErrorRatePercent)
+	}
+	if merged.Reliability.SuccessRatePercent != 99.9 {
+		t.Errorf("SuccessRatePercent: got %v want 99.9", merged.Reliability.SuccessRatePercent)
+	}
+	if merged.Scalability.TargetRPS != 200 {
+		t.Errorf("TargetRPS: got %d want 200", merged.Scalability.TargetRPS)
+	}
+	if len(missing) != 0 {
+		t.Errorf("expected no missing keys, got %v", missing)
+	}
+}
+
+func TestMergeContractNfrIntoConfig_PreservesDefaultsWhenNotInContract(t *testing.T) {
+	// given: base defaults and a contract that only sets p95
+	base := domain.NfrConfig{
+		Performance: domain.PerformanceNfr{P95LatencyMs: 500, ErrorRatePercent: 1.0},
+		Reliability: domain.ReliabilityNfr{SuccessRatePercent: 99.0},
+		Scalability: domain.ScalabilityNfr{TargetRPS: 100},
+	}
+	contract := domain.RivalContract{
+		Evidence: "- nfr.p95_latency_ms: <= 300\n",
+	}
+
+	// when
+	merged, _ := domain.MergeContractNfrIntoConfig(base, contract)
+
+	// then: only p95 is overridden, other fields keep base defaults
+	if merged.Performance.P95LatencyMs != 300 {
+		t.Errorf("P95LatencyMs: got %d want 300 (overridden by contract)", merged.Performance.P95LatencyMs)
+	}
+	if merged.Performance.ErrorRatePercent != 1.0 {
+		t.Errorf("ErrorRatePercent: got %v want 1.0 (base default preserved)", merged.Performance.ErrorRatePercent)
+	}
+	if merged.Reliability.SuccessRatePercent != 99.0 {
+		t.Errorf("SuccessRatePercent: got %v want 99.0 (base default preserved)", merged.Reliability.SuccessRatePercent)
+	}
+	if merged.Scalability.TargetRPS != 100 {
+		t.Errorf("TargetRPS: got %d want 100 (base default preserved)", merged.Scalability.TargetRPS)
+	}
+}
+
+func TestMergeContractNfrIntoConfig_DetectsMissingThresholds(t *testing.T) {
+	// given: a base config with defaults and a contract whose Evidence
+	// section contains zero nfr.* keys (only prose / non-NFR keys).
+	base := domain.NfrConfig{
+		Performance: domain.PerformanceNfr{P95LatencyMs: 500, ErrorRatePercent: 1.0},
+		Reliability: domain.ReliabilityNfr{SuccessRatePercent: 99.0},
+		Scalability: domain.ScalabilityNfr{TargetRPS: 100},
+	}
+	contract := domain.RivalContract{
+		Evidence: strings.Join([]string{
+			"- check: just check",
+			"- test: just test",
+			"- Add a regression test under 100 VUs.",
+		}, "\n"),
+	}
+
+	// when
+	_, missing := domain.MergeContractNfrIntoConfig(base, contract)
+
+	// then: the merger reports the canonical required nfr.* keys as
+	// missing so callers can emit design-feedback instead of inventing
+	// thresholds.
+	if len(missing) == 0 {
+		t.Fatalf("expected missing required nfr.* keys, got none")
+	}
+	wantKey := "nfr.p95_latency_ms"
+	found := false
+	for _, k := range missing {
+		if k == wantKey {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected %q in missing keys, got %v", wantKey, missing)
+	}
+}
+
 func TestParseRivalContractMetadata_ValidV1(t *testing.T) {
 	// given
 	meta := map[string]string{
