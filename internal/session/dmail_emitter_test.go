@@ -48,11 +48,13 @@ func TestEmitViolation_Creates3Files(t *testing.T) {
 		t.Fatalf("expected 3 D-Mail files, got %d", len(entries))
 	}
 
-	// Verify the 3 kinds
-	kinds := map[string]bool{"design-feedback": false, "implementation-feedback": false, "verification-feedback": false}
+	// Verify the 3 canonical kinds. Per Rival Contract v1 Phase 4, the third
+	// emission is "report" (for amadeus context) instead of the non-canonical
+	// "verification-feedback".
+	kinds := map[string]bool{"design-feedback": false, "implementation-feedback": false, "report": false}
 	for _, e := range entries {
 		for k := range kinds {
-			if strings.HasPrefix(e.Name(), k) {
+			if strings.HasPrefix(e.Name(), k+"-") {
 				kinds[k] = true
 			}
 		}
@@ -60,6 +62,93 @@ func TestEmitViolation_Creates3Files(t *testing.T) {
 	for k, found := range kinds {
 		if !found {
 			t.Errorf("missing D-Mail kind: %s", k)
+		}
+	}
+}
+
+// TestEmitViolation_UsesOnlyCanonicalDMailKinds enforces the Rival Contract
+// v1 Phase 4 invariant: every emitted file must use a canonical D-Mail kind
+// (design-feedback, implementation-feedback, or report). No file may use a
+// non-canonical kind such as verification-feedback.
+func TestEmitViolation_UsesOnlyCanonicalDMailKinds(t *testing.T) {
+	// given
+	dir := t.TempDir()
+	emitter := &session.DMailEmitter{StateDir: dir, Logger: &domain.NopLogger{}}
+	result := domain.JudgedData{
+		PlanID:     "plan-canonical",
+		ScriptPath: "test.js",
+		Duration:   "30s",
+		VUs:        10,
+		Verdict:    domain.VerdictViolation,
+		Deviations: []domain.NfrDeviation{
+			{Metric: "p95_latency_ms", Threshold: 500, Actual: 750, Deviation: 50, Severity: domain.SeverityHigh},
+		},
+	}
+
+	// when
+	if err := emitter.EmitViolation(result); err != nil {
+		t.Fatalf("EmitViolation: %v", err)
+	}
+
+	// then
+	outboxDir := filepath.Join(dir, "outbox")
+	entries, _ := os.ReadDir(outboxDir)
+	canonical := map[string]struct{}{
+		"design-feedback":         {},
+		"implementation-feedback": {},
+		"report":                  {},
+	}
+	for _, e := range entries {
+		data, _ := os.ReadFile(filepath.Join(outboxDir, e.Name()))
+		fm := string(data)
+		var kind string
+		for _, line := range strings.Split(fm, "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "kind:") {
+				kind = strings.TrimSpace(strings.TrimPrefix(line, "kind:"))
+				kind = strings.Trim(kind, `"'`)
+				break
+			}
+		}
+		if _, ok := canonical[kind]; !ok {
+			t.Errorf("file %s: non-canonical kind %q (allowed: design-feedback, implementation-feedback, report)", e.Name(), kind)
+		}
+	}
+}
+
+// TestEmitViolation_DoesNotEmitVerificationFeedback proves that the
+// non-canonical "verification-feedback" kind is no longer emitted by any
+// Rival Contract v1 path.
+func TestEmitViolation_DoesNotEmitVerificationFeedback(t *testing.T) {
+	// given
+	dir := t.TempDir()
+	emitter := &session.DMailEmitter{StateDir: dir, Logger: &domain.NopLogger{}}
+	result := domain.JudgedData{
+		PlanID:     "plan-no-verify",
+		ScriptPath: "test.js",
+		Duration:   "30s",
+		VUs:        10,
+		Verdict:    domain.VerdictViolation,
+		Deviations: []domain.NfrDeviation{
+			{Metric: "p95_latency_ms", Threshold: 500, Actual: 750, Deviation: 50, Severity: domain.SeverityMedium},
+		},
+	}
+
+	// when
+	if err := emitter.EmitViolation(result); err != nil {
+		t.Fatalf("EmitViolation: %v", err)
+	}
+
+	// then
+	outboxDir := filepath.Join(dir, "outbox")
+	entries, _ := os.ReadDir(outboxDir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "verification-feedback") {
+			t.Errorf("file %s: verification-feedback prefix is forbidden in Rival Contract v1", e.Name())
+		}
+		data, _ := os.ReadFile(filepath.Join(outboxDir, e.Name()))
+		if strings.Contains(string(data), "kind: verification-feedback") {
+			t.Errorf("file %s: contains forbidden kind 'verification-feedback' in frontmatter", e.Name())
 		}
 	}
 }

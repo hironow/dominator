@@ -24,7 +24,9 @@ func (e *DMailEmitter) outboxDir() string {
 
 // EmitViolation creates 3 D-Mail files for NFR violations:
 // design-feedback (Sightjack), implementation-feedback (Paintress),
-// verification-feedback (Amadeus).
+// and report (Amadeus context). All three kinds are canonical D-Mail v1
+// kinds; the Rival Contract v1 protocol forbids the non-canonical
+// 'verification-feedback' kind because strict routing validators reject it.
 func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 	dir := e.outboxDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -40,7 +42,7 @@ func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 	}{
 		{"design-feedback", "NFR violation detected — design review recommended"},
 		{"implementation-feedback", "NFR violation detected — implementation review recommended"},
-		{"verification-feedback", "NFR violation detected — verification review recommended"},
+		{"report", "NFR violation detected — verifier context for amadeus"},
 	}
 
 	for _, t := range targets {
@@ -68,6 +70,61 @@ Script: %s, VUs: %d, Duration: %s
 		e.Logger.Info("Emitted D-Mail: %s", name)
 	}
 
+	return nil
+}
+
+// EmitDesignFeedbackMissingNfr emits a single design-feedback D-Mail
+// requesting that the contract author (sightjack) add the listed
+// `nfr.*` thresholds to the current Rival Contract v1. The message is
+// deliberately specific: it cites the contract id and lists every key
+// that was missing so the contract author can add them deterministically.
+//
+// This is the dominator's response when a contract exists but does not
+// declare the NFR thresholds required to drive a deterministic load
+// test. The dominator must NOT invent thresholds; instead it asks the
+// contract author to revise the contract.
+func (e *DMailEmitter) EmitDesignFeedbackMissingNfr(missing []string, contractID string) error {
+	dir := e.outboxDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create outbox dir: %w", err)
+	}
+	ts := time.Now().UTC().Format("20060102T150405Z")
+	name := fmt.Sprintf("design-feedback-%s.md", ts)
+	path := filepath.Join(dir, name)
+
+	var bullets strings.Builder
+	for _, key := range missing {
+		fmt.Fprintf(&bullets, "- %s\n", key)
+	}
+
+	content := fmt.Sprintf(`---
+name: design-feedback-%s
+kind: design-feedback
+description: "Rival Contract v1 missing required NFR thresholds for load test"
+severity: medium
+contract_id: %q
+---
+
+# Missing NFR Thresholds in Rival Contract v1
+
+The current Rival Contract v1 (contract_id: %s) does not declare the
+following required NFR thresholds. The dominator cannot drive a
+deterministic load test without them and will not invent values.
+
+Please add the following keys to the contract's Evidence section:
+
+%s
+Each bullet must follow the deterministic shape:
+
+    - <key>: <op> <value>
+
+Example: `+"`- nfr.p95_latency_ms: <= 300`"+`
+`, ts, contractID, contractID, bullets.String())
+
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("write D-Mail %s: %w", name, err)
+	}
+	e.Logger.Info("Emitted D-Mail: %s", name)
 	return nil
 }
 
