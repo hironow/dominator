@@ -8,7 +8,21 @@ import (
 	"time"
 
 	"github.com/hironow/dominator/internal/domain"
+	"github.com/hironow/dominator/internal/platform/projectid"
 )
+
+// projectIDMetadataBlock returns the multi-line YAML metadata block to
+// embed in a D-Mail frontmatter when project_id can be resolved. Returns
+// "" (empty) when unresolved so legacy single-mode renders byte-identical
+// to pre-multiplex output.
+func projectIDMetadataBlock() string {
+	cwd, _ := os.Getwd()
+	id, _ := projectid.Resolve(cwd)
+	if id == "" {
+		return ""
+	}
+	return fmt.Sprintf("metadata:\n  project_id: %s\n", id)
+}
 
 // DMailEmitter creates D-Mail files in the .pass/outbox/ directory.
 // These files are picked up by phonewave for routing to other tools.
@@ -45,6 +59,7 @@ func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 		{"report", "NFR violation detected — verifier context for amadeus"},
 	}
 
+	pidBlock := projectIDMetadataBlock()
 	for _, t := range targets {
 		name := fmt.Sprintf("%s-%s.md", t.kind, ts)
 		content := fmt.Sprintf(`---
@@ -52,7 +67,7 @@ name: %s-%s
 kind: %s
 description: "NFR violation: %d deviation(s) detected"
 severity: %s
----
+%s---
 
 # NFR Violation Report
 
@@ -60,7 +75,7 @@ Plan: %s
 Script: %s, VUs: %d, Duration: %s
 
 %s
-`, t.kind, ts, t.kind, len(result.Deviations), maxSeverity,
+`, t.kind, ts, t.kind, len(result.Deviations), maxSeverity, pidBlock,
 			result.PlanID, result.ScriptPath, result.VUs, result.Duration, table)
 
 		path := filepath.Join(dir, name)
@@ -103,7 +118,7 @@ kind: design-feedback
 description: "Rival Contract v1 missing required NFR thresholds for load test"
 severity: medium
 contract_id: %q
----
+%s---
 
 # Missing NFR Thresholds in Rival Contract v1
 
@@ -119,7 +134,7 @@ Each bullet must follow the deterministic shape:
     - <key>: <op> <value>
 
 Example: `+"`- nfr.p95_latency_ms: <= 300`"+`
-`, ts, contractID, contractID, bullets.String())
+`, ts, contractID, projectIDMetadataBlock(), contractID, bullets.String())
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write D-Mail %s: %w", name, err)
@@ -142,14 +157,14 @@ name: nfr-pass-%s
 kind: report
 description: "All NFR thresholds met"
 severity: low
----
+%s---
 
 # NFR Pass Report
 
 Plan: %s
 Script: %s, VUs: %d, Duration: %s
 Verdict: pass
-`, ts, result.PlanID, result.ScriptPath, result.VUs, result.Duration)
+`, ts, projectIDMetadataBlock(), result.PlanID, result.ScriptPath, result.VUs, result.Duration)
 
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
