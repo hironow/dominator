@@ -494,3 +494,70 @@ func TestEmitViolation_HighestSeverityWins(t *testing.T) {
 		t.Error("expected max severity 'high' in frontmatter")
 	}
 }
+
+func TestEmitViolation_InjectsProjectIDFromEnv(t *testing.T) {
+	// given
+	t.Setenv("RUNOPS_PROJECT_ID", "alpha-bridge")
+	dir := t.TempDir()
+	emitter := &session.DMailEmitter{StateDir: dir, Logger: &domain.NopLogger{}}
+	result := domain.JudgedData{
+		PlanID:     "plan-pid",
+		ScriptPath: "test.js",
+		Duration:   "30s",
+		VUs:        10,
+		Verdict:    domain.VerdictViolation,
+		Deviations: []domain.NfrDeviation{{
+			Metric: "p95_latency_ms", Threshold: 500, Actual: 750, Deviation: 50,
+			Severity: domain.SeverityMedium,
+		}},
+	}
+
+	// when
+	if err := emitter.EmitViolation(result); err != nil {
+		t.Fatalf("EmitViolation: %v", err)
+	}
+
+	// then — every emitted file carries metadata.project_id
+	outboxDir := filepath.Join(dir, "outbox")
+	entries, _ := os.ReadDir(outboxDir)
+	for _, e := range entries {
+		data, _ := os.ReadFile(filepath.Join(outboxDir, e.Name()))
+		if !strings.Contains(string(data), "metadata:\n  project_id: alpha-bridge\n") {
+			t.Errorf("file %s should contain project_id block, got:\n%s", e.Name(), data)
+		}
+	}
+}
+
+func TestEmitViolation_OmitsProjectIDWhenUnresolved(t *testing.T) {
+	// given — env unset + tmp HOME
+	t.Setenv("RUNOPS_PROJECT_ID", "")
+	t.Setenv("HOME", t.TempDir())
+	dir := t.TempDir()
+	emitter := &session.DMailEmitter{StateDir: dir, Logger: &domain.NopLogger{}}
+	result := domain.JudgedData{
+		PlanID:     "plan-no-pid",
+		ScriptPath: "test.js",
+		Duration:   "30s",
+		VUs:        10,
+		Verdict:    domain.VerdictViolation,
+		Deviations: []domain.NfrDeviation{{
+			Metric: "p95_latency_ms", Threshold: 500, Actual: 750, Deviation: 50,
+			Severity: domain.SeverityMedium,
+		}},
+	}
+
+	// when
+	if err := emitter.EmitViolation(result); err != nil {
+		t.Fatalf("EmitViolation: %v", err)
+	}
+
+	// then — legacy single-mode: no project_id key in any frontmatter
+	outboxDir := filepath.Join(dir, "outbox")
+	entries, _ := os.ReadDir(outboxDir)
+	for _, e := range entries {
+		data, _ := os.ReadFile(filepath.Join(outboxDir, e.Name()))
+		if strings.Contains(string(data), "project_id:") {
+			t.Errorf("file %s should NOT contain project_id when unresolved, got:\n%s", e.Name(), data)
+		}
+	}
+}
