@@ -47,4 +47,5 @@ dominator inbox [path] [flags]
 
 ### SEE ALSO
 
-* [dominator](dominator.md)  - NFR Judge for your system
+* [dominator](dominator.md)	 - NFR Judge for your system
+

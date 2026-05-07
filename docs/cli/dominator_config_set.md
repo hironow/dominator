@@ -49,4 +49,5 @@ dominator config set <key> <value> [path] [flags]
 
 ### SEE ALSO
 
-* [dominator config](dominator_config.md)  - Manage dominator configuration
+* [dominator config](dominator_config.md)	 - Manage dominator configuration
+
