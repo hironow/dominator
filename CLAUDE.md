@@ -45,6 +45,7 @@ internal/domain/      Pure types/logic (no I/O, no context.Context)
 - `domain` -> (nothing internal, stdlib only)
 
 **PROHIBITED**:
+
 - `cmd` -> eventsource (ADR S0008)
 - `usecase` -> session, cmd, eventsource
 - `session` -> cmd, usecase (except usecase/port)
