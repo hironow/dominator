@@ -29,7 +29,6 @@ dominator config [flags]
 
 ### SEE ALSO
 
-* [dominator](dominator.md)	 - NFR Judge for your system
-* [dominator config set](dominator_config_set.md)	 - Set a configuration value
-* [dominator config show](dominator_config_show.md)	 - Show current configuration
-
+* [dominator](dominator.md)  - NFR Judge for your system
+* [dominator config set](dominator_config_set.md)  - Set a configuration value
+* [dominator config show](dominator_config_show.md)  - Show current configuration

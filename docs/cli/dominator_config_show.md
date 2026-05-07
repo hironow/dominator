@@ -39,5 +39,4 @@ dominator config show [path] [flags]
 
 ### SEE ALSO
 
-* [dominator config](dominator_config.md)	 - Manage dominator configuration
-
+* [dominator config](dominator_config.md)  - Manage dominator configuration
