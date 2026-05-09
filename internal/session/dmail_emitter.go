@@ -4,24 +4,60 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/hironow/dominator/internal/domain"
+	"github.com/hironow/dominator/internal/platform/actortype"
 	"github.com/hironow/dominator/internal/platform/projectid"
 )
 
-// projectIDMetadataBlock returns the multi-line YAML metadata block to
-// embed in a D-Mail frontmatter when project_id can be resolved. Returns
-// "" (empty) when unresolved so legacy single-mode renders byte-identical
-// to pre-multiplex output.
-func projectIDMetadataBlock() string {
+// metadataBlock returns the multi-line YAML metadata block to embed in a
+// D-Mail frontmatter, carrying project_id (ADR 0016) and actor type keys
+// (ADR 0017: requester_actor_type / requester_actor_source / optional
+// initiating_actor_type). Returns "" (empty) when no metadata can be
+// resolved so legacy single-mode renders byte-identical to pre-multiplex
+// output. Returns an error when RUNOPS_ACTOR_TYPE env is set but invalid
+// — callers must propagate the error and fail the emit (silent escalation
+// guard per ADR 0037 §Producer-side validation).
+func metadataBlock() (string, error) {
+	metadata := map[string]string{}
+
 	cwd, _ := os.Getwd()
-	id, _ := projectid.Resolve(cwd)
-	if id == "" {
-		return ""
+	if id, _ := projectid.Resolve(cwd); id != "" {
+		metadata["project_id"] = id
 	}
-	return fmt.Sprintf("metadata:\n  project_id: %s\n", id)
+
+	updated, err := actortype.InjectActorType(metadata)
+	if err != nil {
+		return "", fmt.Errorf("metadata: actor type: %w", err)
+	}
+	metadata = updated
+
+	if len(metadata) == 0 {
+		return "", nil
+	}
+
+	return renderMetadataBlock(metadata), nil
+}
+
+// renderMetadataBlock returns a deterministic YAML metadata block.
+// Keys are sorted alphabetically so legacy compat (= project_id-only)
+// stays byte-identical with the pre-ADR-0017 single-line output.
+func renderMetadataBlock(metadata map[string]string) string {
+	keys := make([]string, 0, len(metadata))
+	for k := range metadata {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	b.WriteString("metadata:\n")
+	for _, k := range keys {
+		fmt.Fprintf(&b, "  %s: %s\n", k, metadata[k])
+	}
+	return b.String()
 }
 
 // DMailEmitter creates D-Mail files in the .pass/outbox/ directory.
@@ -42,6 +78,10 @@ func (e *DMailEmitter) outboxDir() string {
 // kinds; the Rival Contract v1 protocol forbids the non-canonical
 // 'verification-feedback' kind because strict routing validators reject it.
 func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
+	mdBlock, err := metadataBlock()
+	if err != nil {
+		return fmt.Errorf("emit violation: %w", err)
+	}
 	dir := e.outboxDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create outbox dir: %w", err)
@@ -59,7 +99,6 @@ func (e *DMailEmitter) EmitViolation(result domain.JudgedData) error {
 		{"report", "NFR violation detected — verifier context for amadeus"},
 	}
 
-	pidBlock := projectIDMetadataBlock()
 	for _, t := range targets {
 		name := fmt.Sprintf("%s-%s.md", t.kind, ts)
 		content := fmt.Sprintf(`---
@@ -75,7 +114,7 @@ Plan: %s
 Script: %s, VUs: %d, Duration: %s
 
 %s
-`, t.kind, ts, t.kind, len(result.Deviations), maxSeverity, pidBlock,
+`, t.kind, ts, t.kind, len(result.Deviations), maxSeverity, mdBlock,
 			result.PlanID, result.ScriptPath, result.VUs, result.Duration, table)
 
 		path := filepath.Join(dir, name)
@@ -99,6 +138,10 @@ Script: %s, VUs: %d, Duration: %s
 // test. The dominator must NOT invent thresholds; instead it asks the
 // contract author to revise the contract.
 func (e *DMailEmitter) EmitDesignFeedbackMissingNfr(missing []string, contractID string) error {
+	mdBlock, err := metadataBlock()
+	if err != nil {
+		return fmt.Errorf("emit design feedback missing nfr: %w", err)
+	}
 	dir := e.outboxDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create outbox dir: %w", err)
@@ -134,7 +177,7 @@ Each bullet must follow the deterministic shape:
     - <key>: <op> <value>
 
 Example: `+"`- nfr.p95_latency_ms: <= 300`"+`
-`, ts, contractID, projectIDMetadataBlock(), contractID, bullets.String())
+`, ts, contractID, mdBlock, contractID, bullets.String())
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write D-Mail %s: %w", name, err)
@@ -145,6 +188,10 @@ Example: `+"`- nfr.p95_latency_ms: <= 300`"+`
 
 // EmitPass creates a single informational D-Mail when all NFRs pass.
 func (e *DMailEmitter) EmitPass(result domain.JudgedData) error {
+	mdBlock, err := metadataBlock()
+	if err != nil {
+		return fmt.Errorf("emit pass: %w", err)
+	}
 	dir := e.outboxDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create outbox dir: %w", err)
@@ -164,7 +211,7 @@ severity: low
 Plan: %s
 Script: %s, VUs: %d, Duration: %s
 Verdict: pass
-`, ts, projectIDMetadataBlock(), result.PlanID, result.ScriptPath, result.VUs, result.Duration)
+`, ts, mdBlock, result.PlanID, result.ScriptPath, result.VUs, result.Duration)
 
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
