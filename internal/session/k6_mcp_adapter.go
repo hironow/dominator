@@ -241,7 +241,6 @@ type mcpK6RunResult struct {
 // (fail-closed: absence of proof of validity is treated as invalid).
 func checkValidationResult(data []byte) error {
 	reader := platform.NewStreamReader(bytes.NewReader(data))
-	foundValidResult := false
 
 	for {
 		msg, err := reader.Next()
@@ -260,7 +259,6 @@ func checkValidationResult(data []byte) error {
 			if resultJSON != nil {
 				var vr mcpK6ValidateResult
 				if json.Unmarshal(resultJSON, &vr) == nil {
-					foundValidResult = true
 					if !vr.Valid {
 						return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, validationErrorMessage(vr))
 					}
@@ -279,7 +277,6 @@ func checkValidationResult(data []byte) error {
 				if block.Type == "tool_result" && len(block.Input) > 0 {
 					var vr mcpK6ValidateResult
 					if json.Unmarshal(block.Input, &vr) == nil {
-						foundValidResult = true
 						if !vr.Valid {
 							return fmt.Errorf("k6 script validation failed (exit %d): %s", vr.ExitCode, validationErrorMessage(vr))
 						}
@@ -290,12 +287,9 @@ func checkValidationResult(data []byte) error {
 		}
 	}
 
-	// Fail-closed: if no structured validation result was found, treat as error
-	if !foundValidResult {
-		return fmt.Errorf("k6 script validation inconclusive: no validate_script result found in Claude Code output (is mcp-k6 configured?)")
-	}
-
-	return nil
+	// Fail-closed: reaching here means no validate_script result was found
+	// (each successful match returns directly inside the loop).
+	return fmt.Errorf("k6 script validation inconclusive: no validate_script result found in Claude Code output (is mcp-k6 configured?)")
 }
 
 // extractJSONFromResultText finds the first JSON object in a text string.

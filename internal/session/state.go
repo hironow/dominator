@@ -13,10 +13,7 @@ import (
 
 // InitPassDir creates the .pass/ directory structure and writes
 // a default config.yaml if one does not already exist.
-func InitPassDir(root string, logger domain.Logger) error {
-	if logger == nil {
-		logger = &domain.NopLogger{}
-	}
+func InitPassDir(root string, _ domain.Logger) error {
 	dirs := []string{
 		filepath.Join(root, ".run"),
 		filepath.Join(root, "events"),
