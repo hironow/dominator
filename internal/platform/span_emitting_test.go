@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/hironow/dominator/internal/platform"
-	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
@@ -217,17 +216,6 @@ func spanNames(spans []tracetest.SpanStub) []string {
 		names[i] = s.Name
 	}
 	return names
-}
-
-// findAttr returns the attribute value for the given key, or nil if not found.
-func findAttr(span tracetest.SpanStub, key attribute.Key) *attribute.Value {
-	for _, a := range span.Attributes {
-		if a.Key == key {
-			v := a.Value
-			return &v
-		}
-	}
-	return nil
 }
 
 // ---------------------------------------------------------------------------
