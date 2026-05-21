@@ -30,6 +30,7 @@ dominator [flags]
 * [dominator inbox](dominator_inbox.md)	 - Process incoming D-Mail messages
 * [dominator init](dominator_init.md)	 - Initialize .pass directory
 * [dominator insights](dominator_insights.md)	 - Display judgment insights (hue and coefficient)
+* [dominator mcp](dominator_mcp.md)	 - Run dominator as an MCP server over stdio (refs/issues/0027 Phase 2c MVP)
 * [dominator run](dominator_run.md)	 - Execute k6 load test and judge NFR compliance
 * [dominator status](dominator_status.md)	 - Show dominator operational status
 * [dominator update](dominator_update.md)	 - Self-update dominator to the latest release
