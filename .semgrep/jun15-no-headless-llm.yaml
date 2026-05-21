@@ -12,19 +12,11 @@
 # - Test fixtures and archives = excluded (allowlist)
 # - Active docs / markdown = out of scope (mention is allowed)
 #
-# Phase 2c MVP transitional excludes (= post-pivot will be removed):
-# - internal/session/claude_adapter.go: still calls `claude --print`
-#   via exec.CommandContext until the MCP pivot replaces the prompt
-#   construction with an MCP server interface. Removing the exclude
-#   requires deleting the exec block and routing inference through
-#   the claude code session's MCP client.
-# - internal/session/doctor.go: invokes `claude --print` with a
-#   "List your available MCP tools" prompt to detect mcp-k6. Sub-B
-#   will rework the health check to verify the dominator MCP server's
-#   `dominator.ping` instead.
-#
-# Acceptance gate for Phase 2c completion: every transitional exclude
-# below is deleted and `just semgrep` stays at 0 finding.
+# Phase 2c transitional excludes for internal/session/claude_adapter.go
+# and internal/session/doctor.go were removed in sub-B once both files
+# stopped invoking `claude --print` directly. Test fixtures retain the
+# allowlist because tests/** uses a fake-claude binary that mimics the
+# wire format but never crosses the billing boundary.
 
 rules:
   - id: jun15-no-claude-print-exec-go
@@ -42,10 +34,6 @@ rules:
           - pattern: exec.CommandContext(..., "claude", "--print", ...)
     paths:
       exclude:
-        # Phase 2c transitional: removed in sub-B once the claude_adapter
-        # and doctor invocations are rewritten to drive the MCP server.
-        - internal/session/claude_adapter.go
-        - internal/session/doctor.go
         # Test fixtures that intentionally invoke a fake claude binary.
         - tests/**
 
