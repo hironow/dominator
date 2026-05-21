@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/session"
 )
 
@@ -110,8 +113,8 @@ func TestMCPServer_RejectsUnknownTool(t *testing.T) {
 	}
 }
 
-func TestMCPServer_GetNFRStub_EchoesTargetID(t *testing.T) {
-	// given
+func TestMCPServer_GetNFR_UninitializedPassDir(t *testing.T) {
+	// given: NewMCPServer without WithPassDir → uninitialized.
 	in := strings.NewReader(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"dominator.get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
@@ -123,17 +126,60 @@ func TestMCPServer_GetNFRStub_EchoesTargetID(t *testing.T) {
 
 	// then
 	body := decodeFirstText(t, &out)
-	if got, _ := body["target_id"].(string); got != "api-latency-p95" {
-		t.Errorf("target_id = %v, want api-latency-p95", body["target_id"])
-	}
-	if _, ok := body["contract"]; !ok {
-		t.Errorf("contract descriptor missing: %v", body)
+	if body["initialized"] != false {
+		t.Errorf("initialized = %v, want false", body["initialized"])
 	}
 }
 
-func TestMCPServer_RecordResultStub_EchoesVerdict(t *testing.T) {
+func TestMCPServer_GetNFR_RealImpl_LoadsConfig(t *testing.T) {
+	// given: temp passDir with config.yaml containing NFR section.
+	passDir := t.TempDir()
+	cfgPath := filepath.Join(passDir, domain.ConfigFile)
+	cfg := `target:
+  url: http://localhost:8080
+nfr:
+  performance:
+    p95_latency_ms: 200
+    error_rate_percent: 1.0
+  reliability:
+    error_budget_percent: 5.0
+  scalability:
+    target_rps: 100
+load:
+  vus: 10
+  duration: 30s
+`
+	if err := os.WriteFile(cfgPath, []byte(cfg), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"dominator.get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
+	var out bytes.Buffer
+	srv := session.NewMCPServer(in, &out, nil).WithPassDir(passDir)
+
+	// when
+	if err := srv.Serve(context.Background()); err != nil {
+		t.Fatalf("Serve: %v", err)
+	}
+
+	// then
+	body := decodeFirstText(t, &out)
+	if body["initialized"] != true {
+		t.Errorf("initialized = %v, want true (body=%v)", body["initialized"], body)
+	}
+	if body["target_id"] != "api-latency-p95" {
+		t.Errorf("target_id = %v, want api-latency-p95", body["target_id"])
+	}
+	nfr, _ := body["nfr"].(map[string]any)
+	perf, _ := nfr["performance"].(map[string]any)
+	if got, _ := perf["p95_latency_ms"].(float64); int(got) != 200 {
+		t.Errorf("p95_latency_ms = %v, want 200", perf["p95_latency_ms"])
+	}
+}
+
+func TestMCPServer_RecordResult_RealImpl_PreviewOnly(t *testing.T) {
 	// given
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api-latency-p95","verdict":"pass","summary":"all checks green"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api-latency-p95","verdict":"pass","summary":"all checks green"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -144,17 +190,38 @@ func TestMCPServer_RecordResultStub_EchoesVerdict(t *testing.T) {
 
 	// then
 	body := decodeFirstText(t, &out)
-	if got, _ := body["target_id"].(string); got != "api-latency-p95" {
+	if body["target_id"] != "api-latency-p95" {
 		t.Errorf("target_id = %v, want api-latency-p95", body["target_id"])
 	}
-	if got, _ := body["verdict"].(string); got != "pass" {
+	if body["verdict"] != "pass" {
 		t.Errorf("verdict = %v, want pass", body["verdict"])
 	}
 	if got, _ := body["summary_length"].(float64); int(got) != len("all checks green") {
 		t.Errorf("summary_length = %v, want %d", body["summary_length"], len("all checks green"))
 	}
-	if got, _ := body["recorded"].(bool); got {
-		t.Errorf("recorded = true, want false (stub must not persist)")
+	if body["persistence"] != "preview-only" {
+		t.Errorf("persistence = %v, want preview-only", body["persistence"])
+	}
+}
+
+func TestMCPServer_RecordResult_RealImpl_RejectsMissingFields(t *testing.T) {
+	// given: missing verdict
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
+	var out bytes.Buffer
+	srv := session.NewMCPServer(in, &out, nil)
+
+	// when
+	if err := srv.Serve(context.Background()); err != nil {
+		t.Fatalf("Serve: %v", err)
+	}
+
+	// then
+	body := decodeFirstText(t, &out)
+	if body["persisted"] != false {
+		t.Errorf("persisted = %v, want false", body["persisted"])
+	}
+	if _, ok := body["reason"]; !ok {
+		t.Errorf("reason missing: %v", body)
 	}
 }
 

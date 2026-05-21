@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/hironow/dominator/internal/domain"
@@ -30,11 +31,16 @@ import (
 // carries human-readable diagnostics (per the project stdout/stderr
 // separation invariant). Pattern follows paintress Phase 1
 // (ADR 0017) + sightjack Phase 2a (ADR 0018) + amadeus Phase 2b
-// (ADR 0026).
+// (ADR 0026) + paintress Phase 3 real impl (= 83cb3ca) WithContinent
+// pattern.
+//
+// passDir is the .pass/ state directory used to resolve config /
+// event store paths. When empty, real-impl tools return uninitialized.
 type MCPServer struct {
-	in     io.Reader
-	out    io.Writer
-	logger domain.Logger
+	in      io.Reader
+	out     io.Writer
+	logger  domain.Logger
+	passDir string
 }
 
 // NewMCPServer wires explicit I/O so tests can drive the server
@@ -44,6 +50,14 @@ func NewMCPServer(in io.Reader, out io.Writer, logger domain.Logger) *MCPServer 
 		logger = &domain.NopLogger{}
 	}
 	return &MCPServer{in: in, out: out, logger: logger}
+}
+
+// WithPassDir sets the .pass state directory used by real-impl MCP
+// tools to resolve config / event store paths. Returns s for chaining
+// (= paintress.WithContinent symmetric).
+func (s *MCPServer) WithPassDir(passDir string) *MCPServer {
+	s.passDir = passDir
+	return s
 }
 
 // jsonrpcMessage is the minimum JSON-RPC 2.0 envelope this skeleton
@@ -127,11 +141,9 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 	case "dominator.ping":
 		result = textResult("pong")
 	case "dominator.get_nfr":
-		result = stubGetNFR(call.Arguments)
-		status = "deprecated"
+		result = realGetNFR(s.passDir, call.Arguments)
 	case "dominator.record_result":
-		result = stubRecordResult(call.Arguments)
-		status = "deprecated"
+		result = realRecordResult(call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
 		return s.respondError(msg.ID, -32601, fmt.Sprintf("unknown tool: %s", call.Name))
@@ -198,28 +210,61 @@ func jsonResult(data any) map[string]any {
 	return map[string]any{"content": []map[string]any{{"type": "text", "text": string(body)}}}
 }
 
-// stubGetNFR echoes the requested target_id with a placeholder NFR
-// payload so claude code clients can exercise the contract
-// end-to-end before the real NFR config lookup wiring lands.
-func stubGetNFR(args json.RawMessage) map[string]any {
+// realGetNFR reads .pass/config.yaml and returns the NFR thresholds
+// (= Performance / Reliability / Scalability sections). target_id is
+// echoed back for caller correlation; the actual NFR config is
+// global per-repo (= no per-target indexing in current impl).
+//
+// Pattern: paintress.next_issue (= 83cb3ca) symmetric copy.
+func realGetNFR(passDir string, args json.RawMessage) map[string]any {
 	var payload struct {
 		TargetID string `json:"target_id"`
 	}
 	if len(args) > 0 {
 		_ = json.Unmarshal(args, &payload)
 	}
+	if passDir == "" {
+		return jsonResult(map[string]any{
+			"initialized": false,
+			"reason":      "dominator mcp passDir not configured (start `dominator mcp` from the project root)",
+			"target_id":   payload.TargetID,
+		})
+	}
+	cfgPath := filepath.Join(passDir, domain.ConfigFile)
+	cfg, err := LoadConfig(cfgPath)
+	if err != nil {
+		return jsonResult(map[string]any{
+			"initialized": false,
+			"reason":      fmt.Sprintf("config load failed: %v", err),
+			"target_id":   payload.TargetID,
+		})
+	}
 	return jsonResult(map[string]any{
-		"stub":      true,
-		"target_id": payload.TargetID,
-		"nfr":       nil,
-		"reason":    "phase-2c-mvp: real NFR config lookup lands when the projection store is exposed",
-		"contract":  map[string]any{"target_id": "string", "metric": "string", "threshold": "number", "comparator": "string (lt|le|gt|ge|eq)", "unit": "string"},
+		"initialized": true,
+		"passDir":     passDir,
+		"target_id":   payload.TargetID,
+		"nfr": map[string]any{
+			"performance": map[string]any{
+				"p95_latency_ms":     cfg.Nfr.Performance.P95LatencyMs,     // nosemgrep: lod-excessive-dot-chain -- domain.NfrConfig is a JSON wire-format DTO; intermediate accessor would defeat the YAML binding [permanent]
+				"error_rate_percent": cfg.Nfr.Performance.ErrorRatePercent, // nosemgrep: lod-excessive-dot-chain -- domain.NfrConfig is a JSON wire-format DTO [permanent]
+			},
+			"reliability": cfg.Nfr.Reliability,
+			"scalability": cfg.Nfr.Scalability,
+		},
+		"target": map[string]any{
+			"url": cfg.Target.URL,
+		},
+		"instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call dominator.record_result with verdict='pass' or 'fail'.",
 	})
 }
 
-// stubRecordResult echoes the requested target_id and verdict so
-// claude code clients can exercise the contract.
-func stubRecordResult(args json.RawMessage) map[string]any {
+// realRecordResult validates the input and returns a preview payload
+// without emitting a domain event. Phase 3 scope: preview-only (=
+// persistence='preview-only'). The actual event-source append
+// requires the aggregate + emitter chain (Phase 4 follow-up).
+//
+// Pattern: paintress.update_gradient (= 83cb3ca) symmetric copy.
+func realRecordResult(args json.RawMessage) map[string]any {
 	var payload struct {
 		TargetID string `json:"target_id"`
 		Verdict  string `json:"verdict"`
@@ -228,13 +273,21 @@ func stubRecordResult(args json.RawMessage) map[string]any {
 	if len(args) > 0 {
 		_ = json.Unmarshal(args, &payload)
 	}
+	if payload.TargetID == "" || (payload.Verdict != "pass" && payload.Verdict != "fail") {
+		return jsonResult(map[string]any{
+			"persisted": false,
+			"reason":    "missing required fields: target_id and verdict ('pass' or 'fail')",
+			"received":  payload,
+		})
+	}
 	return jsonResult(map[string]any{
-		"stub":           true,
+		"persisted":      false,
 		"target_id":      payload.TargetID,
 		"verdict":        payload.Verdict,
 		"summary_length": len(payload.Summary),
 		"recorded":       false,
-		"reason":         "phase-2c-mvp: real event-source append lands when the recorder adapter is wired",
+		"persistence":    "preview-only",
+		"note":           "Preview only. Phase 3 does NOT emit a domain event. Phase 4 follow-up wires the aggregate + emitter chain for EventJudgmentRecorded.",
 	})
 }
 
