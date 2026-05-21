@@ -27,19 +27,20 @@
   amadeus ADR 0026 (= LLM owner inversion、 Go CLI を MCP server
   data plane に縮約)
 - Phase 2c MVP scope (= refs 0027 §4 dominator row):
-  - [x] feat/jun15-mcp-pivot branch 作成 + scaffold commit (= 本 commit)
-  - [ ] MCP server endpoint (= `internal/session/mcp_server.go`) skeleton + `dominator mcp` cobra subcommand
-  - [ ] dominator.get_nfr / record_result / ping 等の MCP tool **interface fixed + stub**
-  - [ ] `/nfr-judge` slash command の skill definition (= `plugins/dominator/skills/nfr-judge/SKILL.md`)
-  - [ ] D-Mail envelope schema 参照 (= paintress canonical を symmetric copy)
-  - [ ] **sub-A**: `internal/session/claude_adapter.go` + `internal/session/doctor.go::CheckMCPK6` の `claude --print` invocation を deprecate stub に置換
-  - [ ] **sub-B**: semgrep transitional exclude 削除 + skipped test 完全削除
-  - [ ] **sub-C**: `docs/adr/0003-mcp-pivot.md` 起票 (= dominator 内 ADR 連番継続) + handover finalize
-  - [ ] **sub-D** (post-merge): docs/cli regen + e2e t.Skip if needed
+    - [x] feat/jun15-mcp-pivot branch 作成 + scaffold commit (= 本 commit)
+    - [ ] MCP server endpoint (= `internal/session/mcp_server.go`) skeleton + `dominator mcp` cobra subcommand
+    - [ ] dominator.get_nfr / record_result / ping 等の MCP tool **interface fixed + stub**
+    - [ ] `/nfr-judge` slash command の skill definition (= `plugins/dominator/skills/nfr-judge/SKILL.md`)
+    - [ ] D-Mail envelope schema 参照 (= paintress canonical を symmetric copy)
+    - [ ] **sub-A**: `internal/session/claude_adapter.go` + `internal/session/doctor.go::CheckMCPK6` の `claude --print` invocation を deprecate stub に置換
+    - [ ] **sub-B**: semgrep transitional exclude 削除 + skipped test 完全削除
+    - [ ] **sub-C**: `docs/adr/0003-mcp-pivot.md` 起票 (= dominator 内 ADR 連番継続) + handover finalize
+    - [ ] **sub-D** (post-merge): docs/cli regen + e2e t.Skip if needed
 
 ## Next Actions
 
 次 commit で MCP server skeleton 着手:
+
 1. `internal/session/mcp_server.go` を新規実装 (= amadeus 0ee032e を copy + dominator 用 adapt)
 2. `internal/cmd/mcp.go` cobra subcommand
 3. root.go に `newMCPCommand()` register
