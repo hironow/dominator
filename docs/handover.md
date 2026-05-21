@@ -1,135 +1,69 @@
 # Handover
 
-**Last updated:** 2026-05-21 (asia/tokyo, Phase 2c finalize)
+**Last updated:** 2026-05-22 (asia/tokyo, jun15 MCP pivot 0027 archive 入り)
 **Updated by:** Claude Opus 4.7 session
 
 ## Current State
 
-`feat/jun15-mcp-pivot` long-lived branch 上で refs/issues/0027
-(jun15 MCP pivot v4) の Phase 2c (= dominator horizontal expansion)
-を 7 commit (scaffold + skeleton + skill + envelope + sub-A + sub-B +
-sub-C) 完了。 paintress Phase 1 (PR #213, ADR 0017) + sightjack
-Phase 2a (PR #213, ADR 0018) + amadeus Phase 2b (PR #214, ADR 0026)
-で確立した 10-11 commit pattern を dominator 用に adapt し、
-`claude --print` exec を全 production path から削除、 `dominator mcp`
-stdio MCP server + `/nfr-judge` skill + 9-field D-Mail envelope schema
-を追加、 dominator ADR 0003 を発行。
+jun15 MCP pivot (refs/issues/0027) **全 phase 完了 + archive 入り**。
+dominator は Phase 2c で MCP server-first architecture を確立し、
+Phase 4 follow-up #1-#4 完了後の 2026-05-22 に 0027 が archive (=
+`tap/refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`)。
 
-Phase 2c 完了内容:
+dominator 固有の jun15 landmark:
 
-1. **`.semgrep/jun15-no-headless-llm.yaml`** (= 5 rule, scaffold で
-   transitional exclude を設定し sub-B で削除済。 残る exclude は
-   `tests/**` のみ = fake-claude binary を呼ぶ test fixture 用)。
-2. **`dominator mcp` MCP server** (`internal/session/mcp_server.go`)
-   = JSON-RPC 2.0 stdio、 4 MiB scanner buffer、 Phase 2c MVP として
-   `dominator.ping` / `dominator.get_nfr` / `dominator.record_result`
-   を advertise + dispatch。 後 2 つは contract 固定 + stub。 5 test
-   pass。
-3. **`/nfr-judge` skill** (= `plugins/dominator/skills/nfr-judge/SKILL.md`)
-   + plugin README。 `--plugin-dir ./plugins/dominator` で claude code
-   session に load、 `mcp__dominator__*` + `mcp__k6__*` (external
-   mcp-k6) を allowed-tools に宣言。 dual MCP attach (= dominator
-   data plane + mcp-k6 execution plane)。
-4. **D-Mail 9-field envelope** (`internal/domain/dmail_envelope.go`)
-   = paintress canonical の symmetric copy (= amadeus → dominator
-   方向 nfr_check_request 系を含む全方向の parse / validate / ack
-   を支える)。
-   `tests/fixtures/dmail/dmail-2026-06-01T13-00-00Z-jkl012.{yaml,body.md}`
-   で fixture pair を配置 + 5 test pass。 helper は同 package の
-   config_test.go::contains との衝突回避で envelopeErrContains 命名。
-5. **sub-A** (= claude_adapter.go + doctor.go::CheckMCPK6 の
-   `claude --print` invocation を `ErrMCPPivotDeprecated` stub に
-   置換)。 ClaudeAdapter.Run body 全削除 + 不要 imports (context /
-   fmt / os/exec / strings) 削除、 struct field は composition root
-   互換のため保持。 CheckMCPK6 は Skip 結果 (`post jun15 MCP pivot,
-   refs/issues/0027`) に置換、 stream-json parser / mcp-k6 detection
-   ロジック + bytes / io / time / platform imports 削除。
-6. **sub-B** (= semgrep transitional excludes 削除 + canonical
-   assertion 追加)。 deprecated 削除対象 test は元から存在しない
-   (= dominator は claude_adapter_test.go を持たなかった)、 代わりに
-   canonical assertion (`TestClaudeAdapter_RunReturnsErrMCPPivotDeprecated`、
-   `errors.Is` で `session.ErrMCPPivotDeprecated` を検証) を 1 件
-   新規追加。
-7. **sub-C** (= 本 commit、 dominator ADR 0003 起票 + handover finalize)。
+- ADR 0003 (= `docs/adr/0003-mcp-pivot.md`) で architectural pin 固定
+- 2 MCP tool 全 real impl (= get_nfr / record_result)
+- dual MCP attach pattern: `dominator mcp` (= 自前 server) + `mcp-k6`
+  (= k6 公式 server) を claude code session に同時 attach
+- `/nfr-judge` skill が claude code session 経由の唯一の judge-driving 経路
+- `.semgrep/jun15-no-headless-llm.yaml` 5 rule で headless LLM 経路を
+  permanent block
+- Phase 4 では dominator は対象外 (= record_result は preview-only marker
+  維持。 EventJudgmentRecorded 自動 emit 拡張は将来作業として明示)
 
 ## In Progress
 
-+ branch: `feat/jun15-mcp-pivot` (= scaffold + 6 commit、 7 commit 目
-  が本 sub-C、 sub-D は必要時 post-merge fixup)
-+ main merge は Phase 2c 完了後の PR 作成 + CI green + squash-merge
-  待ち (= paintress / sightjack / amadeus PR pattern)
-+ 次 phase: なし (= phonewave は LLM 非使用のため対象外、 Phase 2c
-  完了で 4 ツール (paintress / sightjack / amadeus / dominator) の
-  jun15 MCP pivot 横展開が全完了)
+なし。 jun15 MCP pivot に関する作業は完了し refs 0027 は archive。
 
 ## Next Actions
 
-1. `feat/jun15-mcp-pivot` に PR 作成 (= title: `feat(session):
-   Phase 2c dominator jun15 MCP pivot (refs/issues/0027)`)
-2. CI を green まで監視 (= sightjack / amadeus PR と同様、
-   docs-check と e2e fail が発生する可能性あり、 必要なら sub-D
-   fixup)
-3. squash-merge 完了後、 refs/issues/0027 を Phase 2 全完了に更新
-4. cost monitoring: 全 4 ツール統合 OTel MCP invocation count を
-   計測、 Anthropic dashboard で credit 0 維持を手動検証
-5. 後続 phase: NFR config + k6 run history wiring (= MVP stubs を
-   real implementation に置換)、 Phase 3 finalize (= 公式 docs /
-   migration guide / lessons learned 集約)
+なし (= Phase 4 #1-#4 全完了)。 後続作業候補は別 issue で fork:
+
+1. **dominator EventJudgmentRecorded 拡張**: paintress Phase 4 #4 と
+   同 pattern (= cmd composition root で aggregate + emitter 構築、
+   session に port 注入) で record_result を preview-only → event
+   store emit へ昇格。 scope やや中規模
+2. Phase 3 cost (c) Anthropic dashboard credit 0 verify (= 2026-06-15
+   launch 以降の operational evidence)
 
 ## Known Risks / Blockers
 
-+ paintress / sightjack / amadeus で post-merge sub-D が必要だった
-  patterns: docs-check (CLI doc 未生成) + e2e tests (deprecated CLI
-  経由)。 dominator も同様の fixup が CI で必要になる可能性。
-+ `dominator generate` 等 LLM-using subcommand が `ErrMCPPivotDeprecated`
-  返却に倒れたため、 既存 NFR judgement workflow が claude code
-  session 経由になる (= human-in-the-loop 必須化)。
-+ `CheckMCPK6` doctor probe が Skip に倒れたため、 operator が
-  `--mcp-config` で mcp-k6 を attach し忘れた場合の早期検出が
-  失われる。 後続 phase で dominator MCP server の health probe に
-  rewire 予定。
+- `dominator run` 等の LLM-using subcommand は `ErrMCPPivotDeprecated`
+  返却に倒れているため、 scheduler / CI で wrap していた job は
+  `/nfr-judge` skill 経由に書き換え必要
+- dual MCP attach (= dominator + mcp-k6) は claude code session の
+  `--mcp-config` で両方を宣言する必要があり、 plugin README で例示済
 
 ## Context the Next Actor Needs
 
-+ **canonical plan**: `refs/HTMLification/docs/issues/0027-jun15-mcp-pivot.html`
-+ **paintress ADR 0017**: `~/tap/paintress/docs/adr/0017-mcp-pivot.md`
-+ **sightjack ADR 0018**: `~/tap/sightjack/docs/adr/0018-mcp-pivot.md`
-+ **amadeus ADR 0026**: `~/tap/amadeus/docs/adr/0026-mcp-pivot.md`
-+ **dominator ADR 0003**: `docs/adr/0003-mcp-pivot.md` (= 本 phase の
-  architectural pin、 3 ツール ADR の symmetric counterpart)
-+ **billing boundary 原則**: LLM 発火は常に human-initiated、 daemon
-  は route まで、 consume 側は明示 slash command で trigger
-+ **semgrep gate**: `.semgrep/jun15-no-headless-llm.yaml` 5 rule、
-  production path に `permanent` nosemgrep 例外禁止、 残る exclude は
-  `tests/**` (fake-claude binary) のみ
-+ **MCP server tool 命名規約**: `<tool_name>.<verb>` (= dot 区切り、
-  paintress の `paintress.next_issue` / sightjack の
-  `sightjack.next_wave` / amadeus の `amadeus.next_review` と対称)。
-  claude code 側の `mcp__<server>__<tool>` 自動 mapping に対応。
-+ **dual MCP attach pattern**: dominator は dominator (data plane)
-    + mcp-k6 (execution plane) の 2 server attach が前提。 skill SKILL.md
-  の Prerequisites を参照。
+- **canonical plan archive**: `tap/refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`
+- **post-mortem**: `tap/refs/HTMLification/lessons/0027-jun15-mcp-pivot-post-mortem.html`
+  (= Pattern 08 で Phase 4 persistence promotion を catalog)
+- **billing boundary 原則**: LLM 発火は常に human-initiated、 daemon は route まで
+- **semgrep gate**: `.semgrep/jun15-no-headless-llm.yaml` 5 rule、 production
+  path に `permanent` nosemgrep 例外禁止
+- **dual MCP attach**: dominator は k6 公式 MCP server (= mcp-k6) と
+  同時 attach する pattern なので、 claude code session 起動時に `--mcp-config`
+  で両 server を宣言
 
 ## Relevant Files and Commands
 
-+ `docs/adr/0003-mcp-pivot.md` - 本 phase の architectural pin
-+ `.semgrep/jun15-no-headless-llm.yaml` - billing-boundary gate (5
-  rule、 production scope 完全 enforced、 `tests/**` のみ exclude)
-+ `internal/session/mcp_server.go` - dominator MCP server (= Phase 2c
-  MVP scope、 3 tool stub)
-+ `internal/session/claude_adapter.go` - `ClaudeAdapter.Run` =
-  `ErrMCPPivotDeprecated` stub
-+ `internal/session/doctor.go` - `CheckMCPK6` = Skip (post jun15
-  MCP pivot)
-+ `internal/domain/dmail_envelope.go` - 9-field envelope symmetric
-  copy
-+ `internal/cmd/mcp.go` - `dominator mcp` cobra subcommand
-+ `plugins/dominator/skills/nfr-judge/SKILL.md` - human-driven
-  entry point
-+ `tests/fixtures/dmail/dmail-2026-06-01T13-00-00Z-jkl012.{yaml,body.md}`
-    + synthetic D-Mail contract fixture (amadeus → dominator 方向、
-  nfr_check_request kind)
-+ `just lint` - full lint (vet + semgrep + root-guard + markdown、
-  全 pass)
-+ `just test` - dominator test suite (= 全 pkg ok)
-+ `just semgrep` - semgrep gate (= 0 findings 維持、 65 rules)
+- `docs/adr/0003-mcp-pivot.md` - architectural pin
+- `.semgrep/jun15-no-headless-llm.yaml` - billing-boundary gate (5 rule)
+- `internal/session/mcp_server.go` - dominator MCP server (2 tool real impl)
+- `internal/cmd/mcp.go` - `dominator mcp` cobra subcommand
+- `plugins/dominator/skills/nfr-judge/SKILL.md` - human-driven entry point (dual MCP attach 例示)
+- `just lint` - semgrep + root-guard + markdownlint (0 issues 維持)
+- `just semgrep` - semgrep gate (0 findings 維持)
+- `go test ./...` - dominator test suite
