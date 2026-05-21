@@ -1,24 +1,36 @@
 # Handover
 
-**Last updated:** 2026-05-22 (asia/tokyo, jun15 MCP pivot 0027 archive 入り)
+**Last updated:** 2026-05-22 (asia/tokyo, 0028 K6MCPAdapter stub 化 landed)
 **Updated by:** Claude Opus 4.7 session
 
 ## Current State
 
-jun15 MCP pivot (refs/issues/0027) **全 phase 完了 + archive 入り**。
+jun15 MCP pivot (refs/issues/0027) **全 phase 完了 + archive 入り**、
+**かつ 0028 K6MCPAdapter helper-level residue cleanup も完了**。
 dominator は Phase 2c で MCP server-first architecture を確立し、
-Phase 4 follow-up #1-#4 完了後の 2026-05-22 に 0027 が archive (=
-`tap/refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`)。
+Phase 4 follow-up 完了後の 2026-05-22 に 0027 が archive (=
+`tap/refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`)、
+同日の audit で発覚した K6MCPAdapter residue は ADR 0004 で stub
+化完了。
 
 dominator 固有の jun15 landmark:
 
 - ADR 0003 (= `docs/adr/0003-mcp-pivot.md`) で architectural pin 固定
+- ADR 0004 (= `docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) で
+  K6MCPAdapter helper の stub 完了 (= 0003 §Enforcement inventory が
+  ClaudeAdapter + CheckMCPK6 のみ列挙し K6MCPAdapter を見落としていた
+  gap を補強)
 - 2 MCP tool 全 real impl (= get_nfr / record_result)
 - dual MCP attach pattern: `dominator mcp` (= 自前 server) + `mcp-k6`
   (= k6 公式 server) を claude code session に同時 attach
 - `/nfr-judge` skill が claude code session 経由の唯一の judge-driving 経路
-- `.semgrep/jun15-no-headless-llm.yaml` 5 rule で headless LLM 経路を
-  permanent block
+- 0028 residue cleanup: `K6MCPAdapter.Run / Validate` 100 行を
+  ErrMCPPivotDeprecated 返却 stub に圧縮、 `permanent` nosemgrep
+  exemption も同時除去 (= 0027 §5 「production path に permanent
+  exemption 禁止」 を厳格遵守)
+- `.semgrep/jun15-no-headless-llm.yaml` **6 rule** (= 0003 base 5 +
+  0004 追加 `jun15-no-print-flag-literal-go`) で headless LLM 経路 +
+  dynamic args spread を permanent block (= 5 ツール symmetric)
 - Phase 4 では dominator は対象外 (= record_result は preview-only marker
   維持。 EventJudgmentRecorded 自動 emit 拡張は将来作業として明示)
 
@@ -60,7 +72,14 @@ dominator 固有の jun15 landmark:
 ## Relevant Files and Commands
 
 - `docs/adr/0003-mcp-pivot.md` - architectural pin
-- `.semgrep/jun15-no-headless-llm.yaml` - billing-boundary gate (5 rule)
+- `docs/adr/0004-mcp-pivot-k6-adapter-stub.md` - 0003 §Enforcement
+  inventory の K6MCPAdapter gap 補強 ADR (= 0028 residue cleanup の
+  rationale + permanent nosemgrep 例外撤去)
+- `.semgrep/jun15-no-headless-llm.yaml` - billing-boundary gate
+  (6 rule、 0004 で `jun15-no-print-flag-literal-go` 追加)
+- `internal/session/k6_mcp_adapter.go` - K6MCPAdapter は
+  ErrMCPPivotDeprecated 即返却 stub (= 0004 で 100 行 → 60 行に圧縮、
+  permanent nosemgrep exemption 撤去)
 - `internal/session/mcp_server.go` - dominator MCP server (2 tool real impl)
 - `internal/cmd/mcp.go` - `dominator mcp` cobra subcommand
 - `plugins/dominator/skills/nfr-judge/SKILL.md` - human-driven entry point (dual MCP attach 例示)
