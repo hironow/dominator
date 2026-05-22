@@ -81,6 +81,17 @@ func Status(ctx context.Context, passDir string, logger domain.Logger) domain.St
 				lastJudgment = ev.Timestamp
 				lastVerdict = domain.VerdictViolation
 			}
+		case domain.EventJudgmentRecorded:
+			// Session-initiated judgment record (= dominator.record_result
+			// MCP tool). Carries the normalised Verdict but no k6 metrics.
+			report.JudgeCount++
+			var data domain.JudgmentRecordedData
+			if jsonErr := json.Unmarshal(ev.Data, &data); jsonErr == nil {
+				if ev.Timestamp.After(lastJudgment) {
+					lastJudgment = ev.Timestamp
+					lastVerdict = data.Verdict
+				}
+			}
 		}
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/platform"
+	"github.com/hironow/dominator/internal/usecase/port"
 )
 
 // MCPServer is a minimal stdio-based Model Context Protocol server
@@ -41,6 +42,7 @@ type MCPServer struct {
 	out     io.Writer
 	logger  domain.Logger
 	passDir string
+	emitter port.JudgmentEventEmitter // optional: when wired, record_result persists EventJudgmentRecorded
 }
 
 // NewMCPServer wires explicit I/O so tests can drive the server
@@ -57,6 +59,17 @@ func NewMCPServer(in io.Reader, out io.Writer, logger domain.Logger) *MCPServer 
 // (= paintress.WithContinent symmetric).
 func (s *MCPServer) WithPassDir(passDir string) *MCPServer {
 	s.passDir = passDir
+	return s
+}
+
+// WithEmitter injects a JudgmentEventEmitter so dominator.record_result
+// persists an EventJudgmentRecorded to the event store. When nil (the
+// default), record_result stays preview-only. The emitter is constructed
+// in the cmd composition root (= paintress.WithEmitter symmetric); the
+// session layer never builds the aggregate directly
+// (session-no-direct-new-aggregate semgrep rule).
+func (s *MCPServer) WithEmitter(emitter port.JudgmentEventEmitter) *MCPServer {
+	s.emitter = emitter
 	return s
 }
 
@@ -143,7 +156,7 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 	case "dominator.get_nfr":
 		result = realGetNFR(s.passDir, call.Arguments)
 	case "dominator.record_result":
-		result = realRecordResult(call.Arguments)
+		result = realRecordResult(s.emitter, call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
 		return s.respondError(msg.ID, -32601, fmt.Sprintf("unknown tool: %s", call.Name))
@@ -258,13 +271,18 @@ func realGetNFR(passDir string, args json.RawMessage) map[string]any {
 	})
 }
 
-// realRecordResult validates the input and returns a preview payload
-// without emitting a domain event. Phase 3 scope: preview-only (=
-// persistence='preview-only'). The actual event-source append
-// requires the aggregate + emitter chain (Phase 4 follow-up).
+// realRecordResult validates the input and, when an emitter is wired,
+// persists an EventJudgmentRecorded to the event store. When emitter is
+// nil (event store unavailable), it falls back to a preview-only payload
+// for backward compatibility.
 //
-// Pattern: paintress.update_gradient (= 83cb3ca) symmetric copy.
-func realRecordResult(args json.RawMessage) map[string]any {
+// LLM firing remains human-initiated: this path only persists an event;
+// the emitter never invokes the model. The MCP tool call itself is
+// driven by a human-initiated claude code session.
+//
+// Pattern: paintress.append_journal (Phase 4 #4) emitter-injection
+// symmetric copy.
+func realRecordResult(emitter port.JudgmentEventEmitter, args json.RawMessage) map[string]any {
 	var payload struct {
 		TargetID string `json:"target_id"`
 		Verdict  string `json:"verdict"`
@@ -280,14 +298,32 @@ func realRecordResult(args json.RawMessage) map[string]any {
 			"received":  payload,
 		})
 	}
+	if emitter == nil {
+		return jsonResult(map[string]any{
+			"persisted":      false,
+			"target_id":      payload.TargetID,
+			"verdict":        payload.Verdict,
+			"summary_length": len(payload.Summary),
+			"recorded":       false,
+			"persistence":    "preview-only",
+			"note":           "Preview only (event store unavailable). Run from a directory with a writable .pass/ state dir to persist EventJudgmentRecorded.",
+		})
+	}
+	if err := emitter.EmitJudgmentRecorded(payload.TargetID, payload.Verdict, payload.Summary, time.Now().UTC()); err != nil {
+		return jsonResult(map[string]any{
+			"persisted": false,
+			"target_id": payload.TargetID,
+			"verdict":   payload.Verdict,
+			"reason":    err.Error(),
+		})
+	}
 	return jsonResult(map[string]any{
-		"persisted":      false,
+		"persisted":      true,
 		"target_id":      payload.TargetID,
 		"verdict":        payload.Verdict,
 		"summary_length": len(payload.Summary),
-		"recorded":       false,
-		"persistence":    "preview-only",
-		"note":           "Preview only. Phase 3 does NOT emit a domain event. Phase 4 follow-up wires the aggregate + emitter chain for EventJudgmentRecorded.",
+		"recorded":       true,
+		"persistence":    "event-store",
 	})
 }
 

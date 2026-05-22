@@ -8,10 +8,34 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/session"
 )
+
+// recordingJudgmentEmitter is a session-local fake implementing
+// port.JudgmentEventEmitter (structurally; no usecase import needed,
+// honouring layer-session-no-import-usecase). It records the emit calls
+// so tests can assert the record_result → emitter wiring.
+type recordingJudgmentEmitter struct {
+	calls []recordedJudgment
+	err   error
+}
+
+type recordedJudgment struct {
+	targetID string
+	verdict  string
+	summary  string
+}
+
+func (r *recordingJudgmentEmitter) EmitJudgmentRecorded(targetID, verdict, summary string, _ time.Time) error {
+	if r.err != nil {
+		return r.err
+	}
+	r.calls = append(r.calls, recordedJudgment{targetID: targetID, verdict: verdict, summary: summary})
+	return nil
+}
 
 func TestMCPServer_ListsAllPhase2cTools(t *testing.T) {
 	// given
@@ -201,6 +225,56 @@ func TestMCPServer_RecordResult_RealImpl_PreviewOnly(t *testing.T) {
 	}
 	if body["persistence"] != "preview-only" {
 		t.Errorf("persistence = %v, want preview-only", body["persistence"])
+	}
+}
+
+func TestMCPServer_RecordResult_EmitterWired_PersistsEventStore(t *testing.T) {
+	// given
+	rec := &recordingJudgmentEmitter{}
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api-latency-p95","verdict":"fail","summary":"p95 exceeded"}}}` + "\n")
+	var out bytes.Buffer
+	srv := session.NewMCPServer(in, &out, nil).WithEmitter(rec)
+
+	// when
+	if err := srv.Serve(context.Background()); err != nil {
+		t.Fatalf("Serve: %v", err)
+	}
+
+	// then
+	body := decodeFirstText(t, &out)
+	if body["persisted"] != true {
+		t.Errorf("persisted = %v, want true", body["persisted"])
+	}
+	if body["persistence"] != "event-store" {
+		t.Errorf("persistence = %v, want event-store", body["persistence"])
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("expected 1 emit call, got %d", len(rec.calls))
+	}
+	if rec.calls[0].targetID != "api-latency-p95" || rec.calls[0].verdict != "fail" {
+		t.Errorf("emit call = %+v, want target_id=api-latency-p95 verdict=fail", rec.calls[0])
+	}
+}
+
+func TestMCPServer_RecordResult_EmitterWired_RejectsInvalidWithoutEmit(t *testing.T) {
+	// given: invalid verdict must NOT reach the emitter
+	rec := &recordingJudgmentEmitter{}
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
+	var out bytes.Buffer
+	srv := session.NewMCPServer(in, &out, nil).WithEmitter(rec)
+
+	// when
+	if err := srv.Serve(context.Background()); err != nil {
+		t.Fatalf("Serve: %v", err)
+	}
+
+	// then
+	body := decodeFirstText(t, &out)
+	if body["persisted"] != false {
+		t.Errorf("persisted = %v, want false", body["persisted"])
+	}
+	if len(rec.calls) != 0 {
+		t.Errorf("expected no emit calls for invalid verdict, got %d", len(rec.calls))
 	}
 }
 
