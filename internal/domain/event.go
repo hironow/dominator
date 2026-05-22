@@ -23,6 +23,13 @@ const (
 	EventJudged            EventType = "judged"
 	EventViolationDetected EventType = "violation.detected"
 	EventPassConfirmed     EventType = "pass.confirmed"
+
+	// jun15 MCP pivot Phase 4 follow-up: session-initiated judgment record.
+	// Emitted by the dominator.record_result MCP tool when a human-initiated
+	// claude code session reports an externally-judged (mcp-k6) verdict.
+	// Distinct from EventJudged because it carries no k6 metrics (the
+	// session judged externally; only the verdict + summary is recorded).
+	EventJudgmentRecorded EventType = "judgment.recorded"
 )
 
 // Event is the envelope for all domain events in the event store.
@@ -88,6 +95,16 @@ type ScriptGeneratedData struct { // nosemgrep: domain-primitives.public-string-
 type GenerationFailedData struct { // nosemgrep: domain-primitives.public-string-field-go, structure.multiple-exported-structs-go -- JSON wire-format event payload; SpecURL is an opaque transport string, not a domain primitive; co-locates with Event/AppendResult/LoadResult as cohesive event sourcing set [permanent]
 	SpecURL string `json:"spec_url"`
 	Reason  string `json:"reason"`
+}
+
+// JudgmentRecordedData is the payload for EventJudgmentRecorded. Unlike
+// JudgedData (which carries full k6 metrics from a CLI-driven run), this
+// payload is lightweight: the session judged externally via mcp-k6 and
+// only reports the verdict + a human-readable summary.
+type JudgmentRecordedData struct { // nosemgrep: domain-primitives.public-string-field-go, structure.multiple-exported-structs-go -- JSON wire-format event payload; TargetID/Summary are opaque transport strings; co-locates with Event/JudgedData as cohesive event sourcing set [permanent]
+	TargetID string  `json:"target_id"`
+	Verdict  Verdict `json:"verdict"`
+	Summary  string  `json:"summary"`
 }
 
 // AppendResult captures metrics from an event store Append operation.

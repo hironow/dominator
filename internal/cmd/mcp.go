@@ -8,6 +8,7 @@ import (
 
 	"github.com/hironow/dominator/internal/domain"
 	"github.com/hironow/dominator/internal/session"
+	"github.com/hironow/dominator/internal/usecase"
 )
 
 // newMCPCommand exposes `dominator mcp` as a stdio MCP server entry
@@ -56,7 +57,26 @@ server separately to the same claude code session.`,
 				return err
 			}
 			passDir := filepath.Join(cwd, domain.StateDir)
-			srv := session.NewMCPServer(cmd.InOrStdin(), cmd.OutOrStdout(), nil).WithPassDir(passDir)
+			logger := loggerFrom(cmd)
+			srv := session.NewMCPServer(cmd.InOrStdin(), cmd.OutOrStdout(), logger).WithPassDir(passDir)
+
+			// Wire the judgment emitter so dominator.record_result persists
+			// an EventJudgmentRecorded to the event store (refs/issues/0027
+			// Phase 4 follow-up, ADR 0005). LoadConfig falls back to
+			// DefaultConfig when config.yaml is absent — that is fine here:
+			// RecordJudgment does not consult the NFR config (the session
+			// judged externally via mcp-k6, only the verdict is recorded).
+			// Only a malformed config.yaml disables persistence, falling
+			// back to preview-only.
+			cfg, cfgErr := session.LoadConfig(filepath.Join(passDir, "config.yaml"))
+			if cfgErr != nil {
+				logger.Warn("record_result persistence disabled (config load failed): %v", cfgErr)
+			} else {
+				agg := domain.NewJudgeAggregate(cfg)
+				store := session.NewEventStore(passDir, logger)
+				srv = srv.WithEmitter(usecase.NewJudgmentEventEmitter(agg, store, logger))
+			}
+
 			return srv.Serve(cmd.Context())
 		},
 	}

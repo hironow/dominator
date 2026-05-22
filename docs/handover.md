@@ -31,8 +31,15 @@ dominator 固有の jun15 landmark:
 - `.semgrep/jun15-no-headless-llm.yaml` **6 rule** (= 0003 base 5 +
   0004 追加 `jun15-no-print-flag-literal-go`) で headless LLM 経路 +
   dynamic args spread を permanent block (= 5 ツール symmetric)
-- Phase 4 では dominator は対象外 (= record_result は preview-only marker
-  維持。 EventJudgmentRecorded 自動 emit 拡張は将来作業として明示)
+- ADR 0005 (= `docs/adr/0005-record-result-event-store-wiring.md`) で
+  record_result を preview-only → event store persist へ昇格
+  (= Phase 4 follow-up、 paintress Phase 4 #4 の emitter-injection pattern)
+- record_result event store wiring: `EventJudgmentRecorded` 新 event type と
+  `JudgmentRecordedData{TargetID,Verdict,Summary}` payload。
+  `JudgeAggregate.RecordJudgment` → `port.JudgmentEventEmitter` →
+  `store.Append`。 cmd composition root で emitter 構築 → session 注入
+  (= session-no-direct-new-aggregate 遵守)。 status.go read model に
+  `EventJudgmentRecorded` case 追加 (= JudgeCount + verdict 反映)
 
 ## In Progress
 
@@ -40,14 +47,13 @@ dominator 固有の jun15 landmark:
 
 ## Next Actions
 
-なし (= Phase 4 #1-#4 全完了)。 後続作業候補は別 issue で fork:
+なし (= Phase 4 #1-#4 全完了 + EventJudgmentRecorded 拡張 ADR 0005 完了)。
+後続作業候補は別 issue で fork:
 
-1. **dominator EventJudgmentRecorded 拡張**: paintress Phase 4 #4 と
-   同 pattern (= cmd composition root で aggregate + emitter 構築、
-   session に port 注入) で record_result を preview-only → event
-   store emit へ昇格。 scope やや中規模
-2. Phase 3 cost (c) Anthropic dashboard credit 0 verify (= 2026-06-15
+1. Phase 3 cost (c) Anthropic dashboard credit 0 verify (= 2026-06-15
    launch 以降の operational evidence)
+2. (任意) `EventJudgmentRecorded` に対する policy 連鎖 (= WHEN judgment
+   THEN command) が必要になれば PolicyEngine handler を追加
 
 ## Known Risks / Blockers
 
