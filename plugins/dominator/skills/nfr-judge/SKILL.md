@@ -1,17 +1,17 @@
 ---
 name: nfr-judge
 description: >-
-  Phase 2c slash command for the dominator jun15 MCP pivot
-  (refs/issues/0027). Triggers when the user types "/nfr-judge",
-  asks to "run a k6 NFR judgement via dominator", "check NFR
-  thresholds with dominator", or "test the dominator MCP server
-  end-to-end". Drives the dominator MCP server's stub tools (get_nfr /
-  record_result) plus the external mcp-k6 server's load-test tools
-  from inside a human-initiated claude code interactive session so
-  inference stays on the subscription quota rather than the Agent SDK
-  credit pool that gates `claude -p` from 2026-06-15.
+  Slash command for the dominator NFR judge (refs/issues/0027 jun15
+  MCP pivot). Triggers when the user types "/nfr-judge", asks to
+  "run a k6 NFR judgement via dominator", "check NFR thresholds with
+  dominator", or "test the dominator MCP server end-to-end". Drives the
+  dominator MCP server's tools (get_nfr / record_result) plus the
+  external mcp-k6 server's load-test tools from inside a
+  human-initiated claude code interactive session so inference stays on
+  the subscription quota rather than the Agent SDK credit pool that
+  gates `claude -p` from 2026-06-15.
 version: 0.1.0
-argument-hint: "(none) - fetches the next NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
+argument-hint: "(none) - fetches the NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
 allowed-tools:
   - Read
   - Edit
@@ -27,7 +27,7 @@ allowed-tools:
   - mcp__k6__validate_script
 ---
 
-# /nfr-judge — dominator MCP pivot Phase 2c
+# /nfr-judge — dominator NFR judge
 
 Human-initiated entry point. Drives the dominator MCP server's tools
 plus the external mcp-k6 server's load-test tools without ever
@@ -51,6 +51,11 @@ If `dominator mcp` is not on PATH, build it first:
 cd path/to/dominator && go build -o ./dist/dominator ./cmd/dominator
 ```
 
+`dominator mcp` must be started from the project root so it can resolve
+the `.pass/` state dir (NFR config + event store). The MCP server
+answers the `initialize` handshake, then exposes ping / get_nfr /
+record_result.
+
 ## Workflow
 
 1. **Verify MCP wiring**. Call `mcp__dominator__dominator_ping`. The
@@ -58,44 +63,42 @@ cd path/to/dominator && go build -o ./dist/dominator ./cmd/dominator
    is not attached — abort and ask the human to relaunch claude
    with `--mcp-config`.
 
-2. **Fetch the next NFR target**. Call
-   `mcp__dominator__dominator_get_nfr` with
-   `{"target_id": "<id>"}` (= human supplies the target). During
-   Phase 2c the response is a stub:
+2. **Fetch the NFR target**. Call `mcp__dominator__dominator_get_nfr`
+   with `{"target_id": "<id>"}` (= human supplies the target). The
+   tool reads `.pass/config.yaml` and returns the NFR thresholds:
 
    ```json
    {
-     "stub": true,
+     "initialized": true,
      "target_id": "<id>",
-     "nfr": null,
-     "reason": "phase-2c-mvp: real implementation lands when ...",
-     "contract": {"target_id": "string", "metric": "string", "threshold": "number", "comparator": "string (lt|le|gt|ge|eq)", "unit": "string"}
+     "nfr": {"performance": {...}, "reliability": {...}, "scalability": {...}},
+     "target": {"url": "..."},
+     "instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call dominator.record_result with verdict='pass' or 'fail'."
    }
    ```
 
-   While `stub == true`, **do NOT proceed to k6 execution or
-   record_result**. Surface the contract descriptor so the human can
-   verify the shape, and stop. Real wiring lands in a subsequent
-   commit on the `feat/jun15-mcp-pivot` branch.
+   If `initialized` is `false` (no `.pass/config.yaml` or load error),
+   surface the `reason` and abort — the human must run `dominator mcp`
+   from a project root with a valid NFR config.
 
-3. **(Post-stub) Validate the k6 script**. Call
-   `mcp__k6__validate_script` with the script path from the NFR
-   specification.
+3. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
+   script path for the target.
 
-4. **(Post-stub) Run the k6 load test**. Call `mcp__k6__run_script`
-   with the validated script. Capture stdout / metrics.
+4. **Run the k6 load test**. Call `mcp__k6__run_script` with the
+   validated script. Capture stdout / metrics.
 
-5. **(Post-stub) Judge pass/fail against threshold**. The session's
-   reasoning compares the captured metric against
-   `nfr.threshold` + `nfr.comparator`. The judgement happens
-   inside the human-initiated claude code session — no
-   `claude -p` invocation is allowed.
+5. **Judge pass/fail against thresholds**. The session's reasoning
+   compares the captured metrics against the `nfr` thresholds returned
+   in step 2. The judgement happens inside the human-initiated claude
+   code session — no `claude -p` invocation is allowed.
 
-6. **(Post-stub) Record the verdict**. Call
+6. **Record the verdict**. Call
    `mcp__dominator__dominator_record_result` with
    `{"target_id": ..., "verdict": "pass"|"fail", "summary": ...}`.
-   Phase 2c stub echoes target_id + verdict + summary_length with
-   `recorded: false` to signal no side-effect.
+   The tool persists an `EventJudgmentRecorded` to the event store and
+   returns `{"persisted": true, "recorded": true, "persistence": "event-store"}`.
+   (If the MCP server was started without a writable `.pass/` dir it
+   falls back to `persistence: "preview-only"` with `recorded: false`.)
 
 ## What this skill must NOT do
 
@@ -108,33 +111,31 @@ cd path/to/dominator && go build -o ./dist/dominator ./cmd/dominator
   non-human-initiated path. The slash command typed by a human is
   the only valid entry to this workflow.
 - Persist a result by writing to `.pass/events/` directly. The
-  `dominator.record_result` MCP tool is the canonical path; that
-  tool will encapsulate the transactional event-source append in a
-  later commit.
+  `dominator.record_result` MCP tool is the canonical path; it
+  encapsulates the transactional event-source append (ADR 0005).
 - Run k6 directly via `bash` / `Bash` — use `mcp__k6__run_script`
   exclusively so the audit trail (= OTel `messaging.*` attrs) stays
   consistent.
 
-## Phase 2c MVP exit criteria
+## Done criteria
 
-This skill is considered Phase 2c MVP complete when:
+A `/nfr-judge` run is complete when, in a real claude code session with
+both MCP servers attached:
 
-1. Calling `/nfr-judge` in a real claude code session with both
-   MCP servers attached returns the stub responses from steps 1-2
-   without error.
-2. The `claude_adapter.go` and `doctor.go::CheckMCPK6`
-   `claude --print` invocations are removed and the semgrep
-   transitional excludes on those two files are deleted (= the
-   final commit on the `feat/jun15-mcp-pivot` branch flips the
-   lint gate from advisory to enforced).
+1. `ping` returns `pong` (handshake + tool dispatch verified).
+2. `get_nfr` returns `initialized: true` with the NFR thresholds.
+3. k6 validate + run succeed via mcp-k6.
+4. `record_result` returns `persisted: true` / `persistence: "event-store"`,
+   and the verdict shows up in `dominator status` (EventJudgmentRecorded
+   read model).
 
 ## Related
 
-- Canonical plan: `refs/HTMLification/docs/issues/0027-jun15-mcp-pivot.html`
+- Canonical plan: `refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`
 - Pattern reference:
-  - paintress ADR 0017 (`~/tap/paintress/docs/adr/0017-mcp-pivot.md`)
-  - sightjack ADR 0018 (`~/tap/sightjack/docs/adr/0018-mcp-pivot.md`)
-  - amadeus ADR 0026 (`~/tap/amadeus/docs/adr/0026-mcp-pivot.md`)
+  - dominator ADR 0003 (`~/tap/dominator/docs/adr/0003-mcp-pivot.md`) — MCP pivot
+  - dominator ADR 0004 (`~/tap/dominator/docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
+  - dominator ADR 0005 (`~/tap/dominator/docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
 - Billing boundary table: refs 0027 §5
 - Mechanical gate (semgrep rules): refs 0027 §6 + `.semgrep/jun15-no-headless-llm.yaml`
 - D-Mail 9-field schema: refs 0027 §8 + `internal/domain/dmail_envelope.go`
