@@ -15,13 +15,14 @@ import (
 	"github.com/hironow/dominator/internal/usecase/port"
 )
 
-// MCPServer is a minimal stdio-based Model Context Protocol server
-// scaffolded for the refs/issues/0027 jun15 MCP pivot (Phase 2c).
+// MCPServer is a stdio-based Model Context Protocol server for the
+// refs/issues/0027 jun15 MCP pivot (Phase 2c + Phase 4 follow-up).
 //
-// This is a SKELETON: only the dominator.ping health-check tool plus
-// 2 stubs (get_nfr / record_result) are exposed. Real wiring against
-// the NFR config + k6 run history ships in subsequent commits on the
-// feat/jun15-mcp-pivot branch.
+// Three tools are exposed with real implementations: dominator.ping
+// (health check), dominator.get_nfr (reads NFR thresholds from
+// config.yaml), and dominator.record_result (persists an
+// EventJudgmentRecorded to the event store when an emitter is wired,
+// ADR 0005).
 //
 // Wire it into a claude code interactive session via --mcp-config so
 // inference stays on the human-initiated session's subscription quota
@@ -170,11 +171,10 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 	return err
 }
 
-// toolDescriptors returns the Phase 2c MVP tool set. Each entry pins
-// the interface (name, description, inputSchema) so claude code
-// clients see a stable contract. The handler bodies (stubGetNFR /
-// stubRecordResult) are placeholders that ship in subsequent commits
-// with real domain wiring.
+// toolDescriptors returns the tool set. Each entry pins the interface
+// (name, description, inputSchema) so claude code clients see a stable
+// contract. All three handler bodies are real implementations
+// (ping / realGetNFR / realRecordResult).
 func toolDescriptors() []map[string]any {
 	return []map[string]any{
 		{
@@ -184,7 +184,7 @@ func toolDescriptors() []map[string]any {
 		},
 		{
 			"name":        "dominator.get_nfr",
-			"description": "Return the NFR specification for the given target (Phase 2c: stub echoes the requested target_id with a contract descriptor).",
+			"description": "Return the NFR thresholds (latency / error rate / success rate / RPS) for the given target, read from the .pass/config.yaml NFR config.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -195,7 +195,7 @@ func toolDescriptors() []map[string]any {
 		},
 		{
 			"name":        "dominator.record_result",
-			"description": "Persist a k6 run result against the given NFR target (Phase 2c: stub echoes the requested target_id + verdict).",
+			"description": "Persist a k6 run result (verdict 'pass'/'fail' + summary) against the given NFR target as an EventJudgmentRecorded event (persistence='event-store' when an emitter is wired; preview-only otherwise).",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
