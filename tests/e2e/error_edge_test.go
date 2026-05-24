@@ -17,18 +17,6 @@ func TestE2E_Check_NoConfig(t *testing.T) {
 	}
 }
 
-func TestE2E_Run_NoPlan(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
-
-	// run without approved plan → should fail
-	_, stderr, err := runCmd(t, dir, "run", "--plan-id", "nonexistent-plan-id")
-	if err == nil {
-		t.Fatal("expected error for nonexistent plan")
-	}
-	_ = stderr
-}
-
 func TestE2E_Approve_NoPlan(t *testing.T) {
 	dir := initTestRepo(t)
 	writeConfig(t, dir, defaultTestConfig())
@@ -36,14 +24,6 @@ func TestE2E_Approve_NoPlan(t *testing.T) {
 	_, _, err := runCmd(t, dir, "approve", "--plan-id", "nonexistent-plan-id")
 	if err == nil {
 		t.Fatal("expected error for nonexistent plan")
-	}
-}
-
-func TestE2E_Generate_NoConfig(t *testing.T) {
-	dir := t.TempDir()
-	_, _, err := runCmd(t, dir, "generate")
-	if err == nil {
-		t.Fatal("expected error when .pass/ does not exist")
 	}
 }
 

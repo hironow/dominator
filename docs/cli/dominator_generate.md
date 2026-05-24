@@ -1,44 +1,23 @@
 ## dominator generate
 
-Generate k6 load test scripts from API spec
+Deprecated (jun15 MCP pivot): generate k6 scripts via claude code
 
 ### Synopsis
 
-Fetch an API specification and generate k6 load test scripts using Claude Code.
+Deprecated by the jun15 MCP pivot.
 
-The --spec flag provides the URL of the API specification to generate tests for.
-The --docs flag provides a documentation URL (required for http protocol).
-The --protocol flag selects the protocol type (openapi, json-rpc, ws-json-rpc, http).
-Generated scripts are written to .pass/k6-scripts/.
+k6 script generation from an API spec is no longer driven by a headless
+'claude -p' loop. Generate scripts from a claude code session (which has
+the spec-reading + authoring tools) and place them under .pass/k6-scripts/.
 
 ```
 dominator generate [path] [flags]
 ```
 
-### Examples
-
-```
-  # Generate from an OpenAPI spec
-  dominator generate --spec https://petstore3.swagger.io/api/v3/openapi.json
-
-  # Generate for a JSON-RPC API
-  dominator generate --spec https://example.com/spec.json -p json-rpc
-
-  # Generate from HTTP documentation (no spec)
-  dominator generate --docs https://example.com/api-docs -p http
-
-  # Overwrite existing scripts
-  dominator generate --spec https://example.com/spec.json --force
-```
-
 ### Options
 
 ```
-      --docs string       API documentation URL (required for http protocol)
-      --force             Overwrite existing scripts
-  -h, --help              help for generate
-  -p, --protocol string   Protocol: openapi, json-rpc, ws-json-rpc, http (default "openapi")
-      --spec string       API spec URL (required for openapi/json-rpc/ws-json-rpc)
+  -h, --help   help for generate
 ```
 
 ### Options inherited from parent commands

@@ -1,37 +1,25 @@
 ## dominator run
 
-Execute k6 load test and judge NFR compliance
+Deprecated (jun15 MCP pivot): use claude code + mcp-k6 + /nfr-judge
 
 ### Synopsis
 
-Run loads an approved execution plan, executes the k6 load test,
-evaluates NFR thresholds, records events, writes insights, and emits
-D-Mail notifications on violation.
+Deprecated by the jun15 MCP pivot (2026-06-15 credit-pool split).
 
-Exit codes:
-  0 = pass (all NFRs met)
-  1 = violation (one or more NFR thresholds exceeded)
-  2 = error (plan not found, not approved, k6 failure, etc.)
+k6 load-test execution + NFR judging are no longer driven by a headless
+'claude -p' loop. From a claude code session with the mcp-k6 server
+attached, use the /nfr-judge skill: it runs k6 via mcp-k6 and records the
+verdict through dominator's MCP tools (get_nfr, record_result). Start the
+data-plane server with 'dominator mcp'.
 
 ```
 dominator run [path] [flags]
 ```
 
-### Examples
-
-```
-  # Run a specific plan
-  dominator run --plan-id abc123
-
-  # Run in a specific directory
-  dominator run --plan-id abc123 /path/to/project
-```
-
 ### Options
 
 ```
-  -h, --help             help for run
-      --plan-id string   Plan ID to execute (required)
+  -h, --help   help for run
 ```
 
 ### Options inherited from parent commands
