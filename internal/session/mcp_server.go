@@ -16,7 +16,7 @@ import (
 )
 
 // MCPServer is a stdio-based Model Context Protocol server for the
-// refs/issues/0027 jun15 MCP pivot (Phase 2c + Phase 4 follow-up).
+// refs/issues/0027 jun15 MCP pivot.
 //
 // Three tools are exposed with real implementations: dominator.ping
 // (health check), dominator.get_nfr (reads NFR thresholds from

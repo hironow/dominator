@@ -17,9 +17,10 @@ import (
 // calls dominator tools from inside the human-initiated subscription
 // quota.
 //
-// Phase 2c MVP exposes dominator.ping + 2 stubs (get_nfr,
-// record_result). Real tool wiring against the NFR config + k6
-// event sourcing lands in subsequent commits on feat/jun15-mcp-pivot.
+// Exposes dominator.ping + dominator.get_nfr (reads NFR thresholds
+// from .pass/config.yaml) + dominator.record_result (persists an
+// EventJudgmentRecorded event to the .pass event store when an
+// emitter is wired).
 //
 // Note: dominator uses mcp-k6 (an external MCP server) for k6 load
 // test execution. That MCP server is attached to the claude code
@@ -29,7 +30,7 @@ import (
 func newMCPCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "mcp",
-		Short: "Run dominator as an MCP server over stdio (refs/issues/0027 Phase 2c MVP)",
+		Short: "Run dominator as an MCP server over stdio (NFR data plane: get_nfr + record_result)",
 		Long: `Start a Model Context Protocol server reading JSON-RPC 2.0
 messages on stdin and writing responses on stdout.
 
@@ -38,10 +39,10 @@ Designed for embedding in a claude code interactive session via
 rather than crossing into the Agent SDK credit pool that gates
 'claude -p' from 2026-06-15.
 
-Phase 2c MVP scope: dominator.ping + 2 stubs (dominator.get_nfr,
-dominator.record_result). Real wiring against the NFR config and
-k6 run history ships in subsequent commits on the
-feat/jun15-mcp-pivot branch.
+Exposes dominator.ping, dominator.get_nfr (NFR thresholds read from
+.pass/config.yaml), and dominator.record_result (persists a verdict
+as an EventJudgmentRecorded event to the .pass event store when an
+emitter is wired; preview-only otherwise).
 
 This MCP server exposes dominator's data plane (NFR config + run
 history). For k6 load test execution, attach the external mcp-k6
