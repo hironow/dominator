@@ -1,29 +1,17 @@
 ## dominator validate
 
-Validate k6 scripts via mcp-k6
+Deprecated (jun15 MCP pivot): validate k6 scripts via claude code + mcp-k6
 
 ### Synopsis
 
-Validate k6 scripts in .pass/k6-scripts/ using Claude Code + mcp-k6 validate_script.
+Deprecated by the jun15 MCP pivot.
 
-Uses the mcp-k6 MCP tool through Claude Code to check script syntax and validity.
-
-Exit codes:
-  0 = valid
-  1 = invalid or error
+k6 script validation is no longer driven by a headless 'claude -p' loop.
+Validate scripts from a claude code session with the mcp-k6 server
+attached (mcp-k6 exposes validate_script); see the /nfr-judge skill.
 
 ```
 dominator validate [path] [flags]
-```
-
-### Examples
-
-```
-  # Validate scripts in current directory
-  dominator validate
-
-  # Validate scripts in a specific project
-  dominator validate /path/to/project
 ```
 
 ### Options

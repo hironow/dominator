@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -102,46 +101,6 @@ func TestE2E_Pipeline_ApproveAlreadyApproved(t *testing.T) {
 	if plan["approved"] != true {
 		t.Error("expected approved=true on re-approve")
 	}
-}
-
-func TestE2E_Pipeline_RunUnapprovedPlan(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
-
-	planID := "test-plan-003"
-	createPlan(t, dir, planID, "load-test.js")
-
-	// Run without approving — should fail
-	_, stderr, err := runCmd(t, dir, "run", "--plan-id", planID)
-	if err == nil {
-		t.Fatal("expected error for unapproved plan")
-	}
-	if !strings.Contains(stderr, "not approved") {
-		t.Errorf("expected 'not approved' error, got: %s", stderr)
-	}
-}
-
-func TestE2E_Pipeline_RunApprovedPlan_WithFakeClaude(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
-
-	planID := "test-plan-004"
-	createPlan(t, dir, planID, "load-test.js")
-	writeK6Script(t, dir, "load-test.js")
-
-	// Approve
-	_, _, err := runCmd(t, dir, "approve", "--plan-id", planID)
-	if err != nil {
-		t.Fatalf("approve: %v", err)
-	}
-
-	// Run with fake-claude — may succeed or fail depending on
-	// fake-claude's stream-json fidelity. The key assertion: no panic.
-	stdout, stderr, runErr := runCmd(t, dir, "run", "--plan-id", planID)
-	_ = stdout
-	_ = stderr
-	_ = runErr
-	// Full run pipeline tested in scenario tests with real Claude
 }
 
 func TestE2E_Pipeline_StatusAfterApprove(t *testing.T) {

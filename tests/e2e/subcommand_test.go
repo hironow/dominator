@@ -79,34 +79,6 @@ func TestE2E_Init_AlreadyExists(t *testing.T) {
 	}
 }
 
-func TestE2E_Validate_ValidConfig(t *testing.T) {
-	// validate requires real Claude + mcp-k6 (fake-claude does not implement
-	// tool_result stream-json protocol). Covered by scenario tests instead.
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
-	writeK6Script(t, dir, "load-test.js")
-
-	// Verify validate runs without panic (exit code may be non-zero with fake-claude)
-	_, stderr, _ := runCmd(t, dir, "validate")
-	if stderr == "" {
-		t.Error("expected validate output on stderr")
-	}
-}
-
-func TestE2E_Validate_InvalidConfig(t *testing.T) {
-	dir := initTestRepo(t)
-	cfg := defaultTestConfig()
-	nfr := cfg["nfr"].(map[string]any)
-	perf := nfr["performance"].(map[string]any)
-	perf["p95_latency_ms"] = -1 // invalid
-	writeConfig(t, dir, cfg)
-
-	_, _, err := runCmd(t, dir, "validate")
-	if err == nil {
-		t.Fatal("expected validation error for negative latency")
-	}
-}
-
 func TestE2E_Doctor(t *testing.T) {
 	dir := initTestRepo(t)
 	writeConfig(t, dir, defaultTestConfig())

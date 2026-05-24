@@ -323,24 +323,6 @@ func TestConfigCmd_HasSubcommands(t *testing.T) {
 	}
 }
 
-func TestGenerateCmd_SpecFlagShorthand(t *testing.T) {
-	rootCmd := cmd.NewRootCommand()
-	var genCmd *cobra.Command
-	for _, sub := range rootCmd.Commands() {
-		if sub.Name() == "generate" {
-			genCmd = sub
-			break
-		}
-	}
-	if genCmd == nil {
-		t.Fatal("generate not found")
-	}
-	f := genCmd.Flags().Lookup("spec")
-	if f == nil {
-		t.Fatal("--spec flag not found")
-	}
-}
-
 func TestApproveCmd_PlanIdShorthand(t *testing.T) {
 	rootCmd := cmd.NewRootCommand()
 	var approveCmd *cobra.Command
@@ -356,24 +338,6 @@ func TestApproveCmd_PlanIdShorthand(t *testing.T) {
 	f := approveCmd.Flags().Lookup("plan-id")
 	if f == nil {
 		t.Fatal("--plan-id flag not found on approve")
-	}
-}
-
-func TestRunCmd_HasPlanIdFlag(t *testing.T) {
-	rootCmd := cmd.NewRootCommand()
-	var runCmd *cobra.Command
-	for _, sub := range rootCmd.Commands() {
-		if sub.Name() == "run" {
-			runCmd = sub
-			break
-		}
-	}
-	if runCmd == nil {
-		t.Fatal("run not found")
-	}
-	f := runCmd.Flags().Lookup("plan-id")
-	if f == nil {
-		t.Fatal("--plan-id flag not found on run")
 	}
 }
 
@@ -645,28 +609,6 @@ func TestInsightsCmd_EmptyHueAndCoeff(t *testing.T) {
 	}
 	if !json.Valid(stdout.Bytes()) {
 		t.Errorf("not valid JSON: %s", stdout.String())
-	}
-}
-
-func TestGenerateCmd_AllProtocolsExist(t *testing.T) {
-	rootCmd := cmd.NewRootCommand()
-	var genCmd *cobra.Command
-	for _, sub := range rootCmd.Commands() {
-		if sub.Name() == "generate" {
-			genCmd = sub
-			break
-		}
-	}
-	if genCmd == nil {
-		t.Fatal("generate not found")
-	}
-	f := genCmd.Flags().Lookup("protocol")
-	if f == nil {
-		t.Fatal("--protocol flag not found")
-	}
-	// Default should be openapi
-	if f.DefValue != "openapi" {
-		t.Errorf("default protocol = %q, want %q", f.DefValue, "openapi")
 	}
 }
 

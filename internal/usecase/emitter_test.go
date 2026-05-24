@@ -8,7 +8,22 @@ import (
 	"github.com/hironow/dominator/internal/usecase"
 )
 
-// fakeEventStore is declared in judge_test.go (same package) and reused here.
+type fakeEventStore struct {
+	events []domain.Event
+}
+
+func (f *fakeEventStore) Append(events ...domain.Event) (domain.AppendResult, error) {
+	f.events = append(f.events, events...)
+	return domain.AppendResult{BytesWritten: 1}, nil
+}
+
+func (f *fakeEventStore) LoadAll() ([]domain.Event, domain.LoadResult, error) {
+	return f.events, domain.LoadResult{}, nil
+}
+
+func (f *fakeEventStore) LoadSince(_ time.Time) ([]domain.Event, domain.LoadResult, error) {
+	return f.events, domain.LoadResult{}, nil
+}
 
 func TestJudgmentEventEmitter_EmitJudgmentRecorded_AppendsEvent(t *testing.T) {
 	// given
