@@ -1,6 +1,6 @@
 ## dominator mcp
 
-Run dominator as an MCP server over stdio (refs/issues/0027 Phase 2c MVP)
+Run dominator as an MCP server over stdio (NFR data plane: get_nfr + record_result)
 
 ### Synopsis
 
@@ -12,10 +12,10 @@ Designed for embedding in a claude code interactive session via
 rather than crossing into the Agent SDK credit pool that gates
 'claude -p' from 2026-06-15.
 
-Phase 2c MVP scope: dominator.ping + 2 stubs (dominator.get_nfr,
-dominator.record_result). Real wiring against the NFR config and
-k6 run history ships in subsequent commits on the
-feat/jun15-mcp-pivot branch.
+Exposes dominator.ping, dominator.get_nfr (NFR thresholds read from
+.pass/config.yaml), and dominator.record_result (persists a verdict
+as an EventJudgmentRecorded event to the .pass event store when an
+emitter is wired; preview-only otherwise).
 
 This MCP server exposes dominator's data plane (NFR config + run
 history). For k6 load test execution, attach the external mcp-k6

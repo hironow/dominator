@@ -50,7 +50,7 @@ silenced the secondary `dangerous-exec-command` rule that might
 otherwise have surfaced the call.
 
 The audit found the same shape in paintress (`claude_adapter.go`
-+ `doctor.go` + `issues.go`) and produced refs/issues/0028 to
+- `doctor.go` + `issues.go`) and produced refs/issues/0028 to
 track repo-wide cleanup. paintress ADR 0018 captures the symmetric
 decision on the paintress side.
 
@@ -182,11 +182,11 @@ repo introduces them.
 - [ADR 0003](0003-mcp-pivot.md) - the base architectural pin
   this ADR extends.
 - `tap/refs/HTMLification/docs/issues/0028-jun15-pivot-transmigration-residue-cleanup.html`
-  - 2026-05-22 audit report and the fix plan this ADR implements.
+    - 2026-05-22 audit report and the fix plan this ADR implements.
 - `tap/refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`
-  - canonical multi-tool MCP pivot plan.
+    - canonical multi-tool MCP pivot plan.
 - `tap/refs/HTMLification/lessons/0027-jun15-mcp-pivot-post-mortem.html`
-  - Pattern 09 ("stub the helpers, not just the entry points")
+    - Pattern 09 ("stub the helpers, not just the entry points")
   documents the lesson behind this ADR.
 - `.semgrep/jun15-no-headless-llm.yaml` - the gate that mechanically
   enforces this decision.
