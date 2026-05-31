@@ -33,7 +33,7 @@ func newCleanCommand() *cobra.Command {
 			info, statErr := os.Stat(stateDir)
 			if statErr != nil || !info.IsDir() {
 				fmt.Fprintf(cmd.ErrOrStderr(), "Nothing to clean at %s\n", repoRoot)
-				return nil
+				return nil //nolint:nilerr // stateDir non-existence is non-fatal, exit clean
 			}
 
 			yes, _ := cmd.Flags().GetBool("yes") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
