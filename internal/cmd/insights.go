@@ -35,7 +35,8 @@ func runInsights(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := session.ValidateStateDir(repoRoot); err != nil {
+	err = session.ValidateStateDir(repoRoot)
+	if err != nil {
 		return err
 	}
 

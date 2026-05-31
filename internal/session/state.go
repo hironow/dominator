@@ -54,7 +54,8 @@ func InitPassDir(root string, _ domain.Logger) error {
 	requiredEntries := []string{".run/", "outbox/", "inbox/", ".otel.env", "events/"}
 	if _, err := os.Stat(gitignorePath); errors.Is(err, fs.ErrNotExist) {
 		content := strings.Join(requiredEntries, "\n") + "\n"
-		if err := os.WriteFile(gitignorePath, []byte(content), 0o644); err != nil {
+		err = os.WriteFile(gitignorePath, []byte(content), 0o644)
+		if err != nil {
 			return err
 		}
 	} else if err == nil {
