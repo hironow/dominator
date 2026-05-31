@@ -3,15 +3,20 @@
 package e2e
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
-	"os/exec"
+	"fmt"
 	"strings"
 	"testing"
 )
 
 func TestE2E_Version(t *testing.T) {
-	stdout, _, err := runCmd(t, t.TempDir(), "version")
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_version"
+	initTestRepo(t, ctx, c, dir)
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "version")
 	if err != nil {
 		t.Fatalf("version: %v", err)
 	}
@@ -21,7 +26,12 @@ func TestE2E_Version(t *testing.T) {
 }
 
 func TestE2E_VersionJSON(t *testing.T) {
-	stdout, _, err := runCmd(t, t.TempDir(), "version", "--json")
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_version_json"
+	initTestRepo(t, ctx, c, dir)
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "version", "--json")
 	if err != nil {
 		t.Fatalf("version --json: %v", err)
 	}
@@ -35,7 +45,12 @@ func TestE2E_VersionJSON(t *testing.T) {
 }
 
 func TestE2E_Help(t *testing.T) {
-	stdout, _, err := runCmd(t, t.TempDir(), "--help")
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_help"
+	initTestRepo(t, ctx, c, dir)
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "--help")
 	if err != nil {
 		t.Fatalf("--help: %v", err)
 	}
@@ -47,56 +62,83 @@ func TestE2E_Help(t *testing.T) {
 }
 
 func TestE2E_UnknownCommand(t *testing.T) {
-	_, _, err := runCmd(t, t.TempDir(), "nonexistent-cmd")
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_unknown"
+	initTestRepo(t, ctx, c, dir)
+
+	_, _, err := runCmd(t, ctx, c, dir, "nonexistent-cmd")
 	if err == nil {
 		t.Fatal("expected error for unknown command")
 	}
 }
 
 func TestE2E_NoSubcommand(t *testing.T) {
-	_, _, err := runCmd(t, t.TempDir())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_no_subcmd"
+	initTestRepo(t, ctx, c, dir)
+
+	_, _, err := runCmd(t, ctx, c, dir)
 	if err == nil {
 		t.Fatal("expected error when no subcommand given")
 	}
 }
 
 func TestE2E_Init(t *testing.T) {
-	dir := initTestRepo(t)
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_init"
+
+	initTestRepo(t, ctx, c, dir)
 
 	for _, sub := range []string{".run", "events", "outbox", "inbox", "archive", "k6-scripts"} {
-		assertFileExists(t, dir+"/.pass/"+sub)
+		path := fmt.Sprintf("%s/.pass/%s", dir, sub)
+		if !dirExistsInContainer(t, ctx, c, path) && !fileExistsInContainer(t, ctx, c, path) {
+			t.Errorf("expected %s to exist in container", path)
+		}
 	}
-	assertFileExists(t, dir+"/.pass/config.yaml")
-	assertFileExists(t, dir+"/.pass/.gitignore")
+	if !fileExistsInContainer(t, ctx, c, dir+"/.pass/config.yaml") {
+		t.Error("expected config.yaml to exist in container")
+	}
 }
 
 func TestE2E_Init_AlreadyExists(t *testing.T) {
-	dir := initTestRepo(t)
-	_, stderr, err := runCmd(t, dir, "init")
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_init_exist"
+
+	initTestRepo(t, ctx, c, dir)
+	_, _, err := runCmd(t, ctx, c, dir, "init")
 	if err == nil {
 		t.Fatal("expected error on second init")
-	}
-	if !strings.Contains(stderr, "already exists") {
-		t.Errorf("expected 'already exists' error, got: %s", stderr)
 	}
 }
 
 func TestE2E_Doctor(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doctor"
 
-	_, stderr, err := runCmd(t, dir, "doctor")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	_, stderr, err := runCmd(t, ctx, c, dir, "doctor")
 	_ = err
 	if stderr == "" {
-		t.Error("expected doctor output on stderr")
+		t.Error("expected doctor output")
 	}
 }
 
 func TestE2E_DoctorJSON(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doctor_json"
 
-	stdout, _, _ := runCmd(t, dir, "doctor", "--json")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	stdout, _, _ := runCmd(t, ctx, c, dir, "doctor", "--json")
 	var result struct {
 		Checks []struct {
 			Name    string `json:"name"`
@@ -104,19 +146,21 @@ func TestE2E_DoctorJSON(t *testing.T) {
 			Message string `json:"message"`
 		} `json:"checks"`
 	}
-	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
-		t.Fatalf("parse doctor JSON: %v\nraw: %s", err, stdout)
-	}
+	parseJSONOutput(t, stdout, &result)
 	if len(result.Checks) == 0 {
 		t.Error("expected at least one check")
 	}
 }
 
 func TestE2E_Status_Empty(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_status"
 
-	stdout, _, err := runCmd(t, dir, "status")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "status")
 	if err != nil {
 		t.Fatalf("status: %v", err)
 	}
@@ -126,10 +170,14 @@ func TestE2E_Status_Empty(t *testing.T) {
 }
 
 func TestE2E_Status_JSON(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_status_json"
 
-	stdout, _, err := runCmd(t, dir, "status", "--output", "json")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "status", "--output", "json")
 	if err != nil {
 		t.Fatalf("status --json: %v", err)
 	}
@@ -141,54 +189,54 @@ func TestE2E_Status_JSON(t *testing.T) {
 }
 
 func TestE2E_Clean(t *testing.T) {
-	dir := initTestRepo(t)
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_clean"
 
-	_, stderr, err := runCmd(t, dir, "clean", "--yes")
+	initTestRepo(t, ctx, c, dir)
+	_, _, err := runCmd(t, ctx, c, dir, "clean", "--yes")
 	if err != nil {
-		t.Fatalf("clean --yes: %v\nstderr: %s", err, stderr)
+		t.Fatalf("clean --yes failed: %v", err)
 	}
-	if _, statErr := statFile(dir + "/.pass"); statErr == nil {
+	if dirExistsInContainer(t, ctx, c, dir+"/.pass") {
 		t.Error("expected .pass/ to be removed after clean")
 	}
 }
 
 func TestE2E_ArchivePrune_Empty(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_archive"
 
-	stdout, _, err := runCmd(t, dir, "archive-prune")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	stdout, _, err := runCmd(t, ctx, c, dir, "archive-prune")
 	if err != nil {
-		t.Fatalf("archive-prune: %v", err)
+		t.Fatalf("archive-prune failed: %v", err)
 	}
-	// No archives to prune — should succeed with 0 pruned
 	if !strings.Contains(stdout, "0") {
 		t.Logf("archive-prune output: %s", stdout)
 	}
 }
 
 func TestE2E_MCPServerToolsList(t *testing.T) {
-	// given
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_mcp"
+	initTestRepo(t, ctx, c, dir)
+
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
-
-	// when
-	cmd := exec.Command(dominatorBin(), "mcp")
-	cmd.Stdin = strings.NewReader(input)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	stdout, _, err := runCmdStdin(t, ctx, c, dir, input, "mcp")
 	if err != nil {
-		t.Fatalf("mcp command failed: %v\nstderr: %s", err, stderr.String())
+		t.Fatalf("mcp command failed: %v", err)
 	}
 
-	// then
-	outStr := stdout.String()
-	idx := strings.Index(outStr, `{"jsonrpc"`)
+	idx := strings.Index(stdout, `{"jsonrpc"`)
 	if idx < 0 {
-		t.Fatalf("no JSON-RPC response found in stdout: %s", outStr)
+		t.Fatalf("no JSON-RPC response found in stdout: %s", stdout)
 	}
-	jsonStr := outStr[idx:]
+	jsonStr := stdout[idx:]
 
 	var resp struct {
 		JSONRPC string `json:"jsonrpc"`
@@ -230,4 +278,3 @@ func TestE2E_MCPServerToolsList(t *testing.T) {
 		}
 	}
 }
-

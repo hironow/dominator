@@ -3,63 +3,75 @@
 package e2e
 
 import (
-	"os"
-	"path/filepath"
+	"context"
+	"fmt"
 	"testing"
 )
 
 func TestE2E_DoctorRepair_MissingSkills(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doc_skills"
+
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
 
 	// Remove skills directory
-	skillsDir := filepath.Join(dir, ".pass", "skills")
-	os.RemoveAll(skillsDir)
+	skillsDir := fmt.Sprintf("%s/.pass/skills", dir)
+	execInContainer(t, ctx, c, []string{"rm", "-rf", skillsDir})
 
 	// Doctor --repair should attempt to fix
-	_, stderr, _ := runCmd(t, dir, "doctor", "--repair")
-
-	// Doctor ran without panic — check stderr for any output
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
 	if stderr == "" {
-		t.Error("expected doctor output on stderr")
+		t.Error("expected doctor output")
 	}
-	// Skills may or may not be restored (depends on repair implementation)
-	// The key assertion: doctor --repair does not crash
 }
 
 func TestE2E_DoctorRepair_MissingGitignore(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doc_gitignore"
 
-	gitignorePath := filepath.Join(dir, ".pass", ".gitignore")
-	os.Remove(gitignorePath)
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	gitignorePath := fmt.Sprintf("%s/.pass/.gitignore", dir)
+	execInContainer(t, ctx, c, []string{"rm", "-f", gitignorePath})
 
 	// Doctor --repair should attempt to restore
-	_, stderr, _ := runCmd(t, dir, "doctor", "--repair")
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
 	if stderr == "" {
-		t.Error("expected doctor output on stderr")
+		t.Error("expected doctor output")
 	}
 }
 
 func TestE2E_DoctorRepair_MissingDirectories(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doc_dirs"
 
-	inboxDir := filepath.Join(dir, ".pass", "inbox")
-	os.RemoveAll(inboxDir)
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	inboxDir := fmt.Sprintf("%s/.pass/inbox", dir)
+	execInContainer(t, ctx, c, []string{"rm", "-rf", inboxDir})
 
 	// Doctor --repair should attempt to restore
-	_, stderr, _ := runCmd(t, dir, "doctor", "--repair")
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
 	if stderr == "" {
-		t.Error("expected doctor output on stderr")
+		t.Error("expected doctor output")
 	}
 }
 
 func TestE2E_DoctorRepair_JSON(t *testing.T) {
-	dir := initTestRepo(t)
-	writeConfig(t, dir, defaultTestConfig())
+	ctx := context.Background()
+	c := buildTestContainer(t, ctx)
+	dir := "/workspace/t_doc_json"
 
-	stdout, _, _ := runCmd(t, dir, "doctor", "--repair", "--json")
+	initTestRepo(t, ctx, c, dir)
+	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
+
+	stdout, _, _ := runCmd(t, ctx, c, dir, "doctor", "--repair", "--json")
 
 	// Should be valid JSON
 	var result map[string]any
