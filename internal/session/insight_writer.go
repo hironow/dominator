@@ -43,7 +43,7 @@ func (w *InsightWriter) RecordHue(result domain.JudgedData) error {
 	if err != nil {
 		return fmt.Errorf("open hue.md: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString(entry); err != nil {
 		return fmt.Errorf("write hue.md: %w", err)
@@ -80,7 +80,7 @@ func (w *InsightWriter) RecordCoefficient(result domain.JudgedData) error {
 	if err != nil {
 		return fmt.Errorf("open coefficient.md: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString(entry); err != nil {
 		return fmt.Errorf("write coefficient.md: %w", err)
