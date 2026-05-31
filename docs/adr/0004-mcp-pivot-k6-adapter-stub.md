@@ -50,6 +50,7 @@ silenced the secondary `dangerous-exec-command` rule that might
 otherwise have surfaced the call.
 
 The audit found the same shape in paintress (`claude_adapter.go`
+
 - `doctor.go` + `issues.go`) and produced refs/issues/0028 to
 track repo-wide cleanup. paintress ADR 0018 captures the symmetric
 decision on the paintress side.
