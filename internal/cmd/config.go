@@ -41,7 +41,8 @@ func newConfigShowCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := session.ValidateStateDir(repoRoot); err != nil {
+			err = session.ValidateStateDir(repoRoot)
+			if err != nil {
 				return err
 			}
 			stateDir := filepath.Join(repoRoot, domain.StateDir)

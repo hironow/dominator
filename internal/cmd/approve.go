@@ -31,7 +31,8 @@ is output to stdout.`,
 				return err
 			}
 
-			if err := session.ValidateStateDir(repoRoot); err != nil {
+			err = session.ValidateStateDir(repoRoot)
+			if err != nil {
 				return err
 			}
 
@@ -51,7 +52,8 @@ is output to stdout.`,
 			eventStore := session.NewEventStore(stateDir, logger)
 			ev, evErr := domain.NewEvent(domain.EventPlanApproved, plan, time.Now())
 			if evErr == nil {
-				if _, err := eventStore.Append(ev); err != nil {
+				_, err = eventStore.Append(ev)
+				if err != nil {
 					return fmt.Errorf("append event: %w", err)
 				}
 			}

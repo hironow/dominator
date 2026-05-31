@@ -32,7 +32,8 @@ output to stdout for piping to other tools.`,
 				return err
 			}
 
-			if err := session.ValidateStateDir(repoRoot); err != nil {
+			err = session.ValidateStateDir(repoRoot)
+			if err != nil {
 				return err
 			}
 
