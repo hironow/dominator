@@ -123,9 +123,9 @@ func TestE2E_Doctor(t *testing.T) {
 	initTestRepo(t, ctx, c, dir)
 	heredocWrite(t, ctx, c, dir+"/.pass/config.yaml", defaultTestConfigYAML())
 
-	stdout, _, err := runCmd(t, ctx, c, dir, "doctor")
+	_, stderr, err := runCmd(t, ctx, c, dir, "doctor")
 	_ = err
-	if stdout == "" {
+	if stderr == "" {
 		t.Error("expected doctor output")
 	}
 }
