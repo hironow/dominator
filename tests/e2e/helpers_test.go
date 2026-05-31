@@ -15,6 +15,9 @@ import (
 
 // dominatorBin returns the path to the dominator binary.
 func dominatorBin() string {
+	if env := os.Getenv("DOMINATOR_BIN"); env != "" {
+		return env
+	}
 	if _, err := os.Stat("/usr/local/bin/dominator"); err == nil {
 		return "/usr/local/bin/dominator"
 	}
