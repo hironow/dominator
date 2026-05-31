@@ -51,7 +51,9 @@ is output to stdout.`,
 			eventStore := session.NewEventStore(stateDir, logger)
 			ev, evErr := domain.NewEvent(domain.EventPlanApproved, plan, time.Now())
 			if evErr == nil {
-				eventStore.Append(ev)
+				if _, err := eventStore.Append(ev); err != nil {
+					return fmt.Errorf("append event: %w", err)
+				}
 			}
 
 			data, err := json.MarshalIndent(plan, "", "  ")

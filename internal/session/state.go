@@ -68,13 +68,18 @@ func InitPassDir(root string, _ domain.Logger) error {
 			}
 			if len(toAdd) > 0 {
 				f, openErr := os.OpenFile(gitignorePath, os.O_APPEND|os.O_WRONLY, 0o644)
-				if openErr == nil {
-					defer f.Close()
-					if len(existing) > 0 && !strings.HasSuffix(string(existing), "\n") {
-						f.Write([]byte("\n"))
+				if openErr != nil {
+					return openErr
+				}
+				defer func() { _ = f.Close() }()
+				if len(existing) > 0 && !strings.HasSuffix(string(existing), "\n") {
+					if _, err := f.Write([]byte("\n")); err != nil {
+						return err
 					}
-					for _, entry := range toAdd {
-						f.Write([]byte(entry + "\n"))
+				}
+				for _, entry := range toAdd {
+					if _, err := f.Write([]byte(entry + "\n")); err != nil {
+						return err
 					}
 				}
 			}

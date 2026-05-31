@@ -53,7 +53,7 @@ func NewRootCommand() *cobra.Command {
 			}
 			noColor, _ := cmd.Flags().GetBool("no-color") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			if noColor {
-				os.Setenv("NO_COLOR", "1")
+				_ = os.Setenv("NO_COLOR", "1")
 			}
 			verbose, _ := cmd.Flags().GetBool("verbose") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetBool cannot fail at runtime [permanent]
 			out := cmd.ErrOrStderr()
@@ -83,10 +83,10 @@ func NewRootCommand() *cobra.Command {
 		cobra.OnFinalize(func() {
 			endRootSpan()
 			if shutdownMeter != nil {
-				shutdownMeter(context.Background())
+				_ = shutdownMeter(context.Background())
 			}
 			if shutdownTracer != nil {
-				shutdownTracer(context.Background())
+				_ = shutdownTracer(context.Background())
 			}
 		})
 	})

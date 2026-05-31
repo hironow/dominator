@@ -80,7 +80,9 @@ func RunCheck(
 	// Record event
 	ev, evErr := domain.NewEvent(domain.EventPlanCreated, plan, time.Now())
 	if evErr == nil {
-		eventStore.Append(ev)
+		if _, err := eventStore.Append(ev); err != nil {
+			return nil, fmt.Errorf("append event: %w", err)
+		}
 	}
 
 	logger.Info("Plan created: %s (script: %s)", plan.ID, plan.Script)
