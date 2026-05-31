@@ -21,8 +21,8 @@ func TestE2E_DoctorRepair_MissingSkills(t *testing.T) {
 	execInContainer(t, ctx, c, []string{"rm", "-rf", skillsDir})
 
 	// Doctor --repair should attempt to fix
-	stdout, _, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
-	if stdout == "" {
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
+	if stderr == "" {
 		t.Error("expected doctor output")
 	}
 }
@@ -39,8 +39,8 @@ func TestE2E_DoctorRepair_MissingGitignore(t *testing.T) {
 	execInContainer(t, ctx, c, []string{"rm", "-f", gitignorePath})
 
 	// Doctor --repair should attempt to restore
-	stdout, _, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
-	if stdout == "" {
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
+	if stderr == "" {
 		t.Error("expected doctor output")
 	}
 }
@@ -57,8 +57,8 @@ func TestE2E_DoctorRepair_MissingDirectories(t *testing.T) {
 	execInContainer(t, ctx, c, []string{"rm", "-rf", inboxDir})
 
 	// Doctor --repair should attempt to restore
-	stdout, _, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
-	if stdout == "" {
+	_, stderr, _ := runCmd(t, ctx, c, dir, "doctor", "--repair")
+	if stderr == "" {
 		t.Error("expected doctor output")
 	}
 }
