@@ -1,20 +1,20 @@
 # Dominator
 
-**NFR Judge that validates system quality attributes via k6 load testing, then routes corrective D-Mails when non-functional requirements are violated.**
+**An MCP server + data plane for NFR judgment: it serves configured NFR thresholds and records externally judged k6 results.**
 
-Dominator uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) to generate k6 load test scripts from API specifications, executes them, evaluates results against NFR thresholds, and emits D-Mails to downstream tools when violations are detected.
+Following the jun15 MCP pivot, LLM ownership and k6 execution moved to a human-initiated [Claude Code](https://docs.anthropic.com/en/docs/claude-code) session. Dominator the Go CLI is now a data plane: it serves NFR thresholds over MCP, records pass/fail verdicts in the event store, and provides supporting local state commands. The old headless generation / validation / run loop has been retired.
 
 ```bash
-dominator run --plan-id <plan-id>
+dominator mcp
 ```
 
-This command executes the approved plan through the NFR judgment pipeline:
+`dominator mcp` starts the MCP server. Its tools expose:
 
-1. **Load Plan** — Retrieve the approved execution plan from `.pass/.run/plans/`
-2. **Execute k6** — Run the load test script with configured VUs and duration
-3. **Evaluate NFR** — Compare results against performance, reliability, and scalability thresholds
-4. **Record Judgment** — Append events to the event store, write hue/coefficient insights
-5. **Emit D-Mail** — Route violation or pass reports to downstream tools via outbox
+1. `dominator.ping` — health check
+2. `dominator.get_nfr` — read NFR thresholds from `.pass/config.yaml`
+3. `dominator.record_result` — persist a pass/fail verdict as `EventJudgmentRecorded`
+
+The claude-code session runs the `/nfr-judge` skill with both Dominator and mcp-k6 attached. That session validates/runs k6 through mcp-k6, compares the result against the thresholds returned by `dominator.get_nfr`, and records the final verdict through `dominator.record_result`.
 
 ## Why "Dominator"?
 
@@ -46,17 +46,17 @@ This structure maps directly to NFR validation:
 
 ## CLI Flow
 
-The standard workflow follows five phases:
+The current workflow follows the MCP pivot boundary:
 
 ```
-generate -> check -> approve -> run -> D-Mail
+claude-code session -> mcp-k6 -> dominator.record_result
 ```
 
-1. **Generate** — Claude Code reads an API spec and produces a k6 load test script
-2. **Check** — Create an execution plan from existing k6 scripts with NFR thresholds
-3. **Approve** — Human inspector reviews and approves the plan
-4. **Run** — Execute the approved plan, evaluate results, record judgment
-5. **D-Mail** — Route violation/pass reports to downstream tools
+1. **Start MCP** — `dominator mcp` serves NFR thresholds and result recording
+2. **Run Skill** — Claude Code invokes `/nfr-judge`
+3. **Execute k6** — The session calls mcp-k6, not the Go CLI
+4. **Record Result** — The session calls `dominator.record_result`
+5. **Inspect State** — `dominator status`, `dominator insights`, and event replay commands read the local state
 
 ## Quick Start
 
@@ -67,17 +67,10 @@ just install
 # Initialize .pass/ with default config
 dominator init
 
-# Generate k6 script from API spec
-dominator generate --spec https://api.example.com/openapi.json --protocol openapi
+# Start the data-plane server for a claude-code session
+dominator mcp
 
-# Create execution plan
-dominator check
-
-# Approve the plan (after review)
-dominator approve --plan-id <plan-id>
-
-# Execute and judge
-dominator run --plan-id <plan-id>
+# In the claude-code session, attach dominator + mcp-k6 and run /nfr-judge
 
 # View judgment insights
 dominator insights
@@ -90,10 +83,12 @@ Running `dominator` without a subcommand shows usage help.
 | Command | Description |
 |---------|-------------|
 | `init` | Initialize `.pass/` directory |
-| `generate` | Generate k6 load test scripts from API spec via Claude Code |
-| `check` | Create an execution plan from k6 scripts |
-| `approve` | Approve an execution plan for execution |
-| `run` | Execute k6 load test and judge NFR compliance |
+| `mcp` | Start the MCP server (data plane: ping / get_nfr / record_result) |
+| `generate` | Deprecated stub; generate scripts from the claude-code session |
+| `check` | Local helper: create a plan from existing k6 scripts |
+| `approve` | Local helper: approve an existing plan |
+| `run` | Deprecated stub; run k6 via claude-code + mcp-k6 + `/nfr-judge` |
+| `validate` | Deprecated stub; validate k6 scripts via claude-code + mcp-k6 |
 | `insights` | Display judgment insights (hue and coefficient) |
 | `inbox` | Process incoming D-Mail messages |
 | `config show` / `config set` | View or update configuration |
@@ -209,34 +204,23 @@ dominator insights | jq '.coefficient'
 ## Architecture
 
 ```
-dominator run --plan-id <id>
+claude-code session
     |
-    |  1. Load Plan
-    |  +-- PlanStore.LoadPlan(planID)
-    |  +-- Verify plan.Approved == true
-    |
-    |  2. Execute k6
-    |  +-- K6Runner.Run(script, load config)
-    |  +-- Parse K6Results (p95, error rate, success rate, RPS)
-    |
-    |  3. Evaluate NFR
-    |  +-- EvaluateNfr(results, thresholds)
-    |  +-- CalcDeviation / CalcUnderDeviation per metric
-    |  +-- CalcSeverity per deviation
-    |  +-- Verdict: pass or violation
-    |
-    |  4. Record
-    |  +-- InsightWriter: hue.md + coefficient.md
-    |  +-- EventStore: judged, violation.detected / pass.confirmed
-    |
-    |  5. Emit D-Mail
-    |  +-- Violation: 3 D-Mails (design/impl/verification feedback)
-    |  +-- Pass: 1 D-Mail (nfr-pass report)
+    |  /nfr-judge skill
+    |  +-- Call dominator.get_nfr
+    |  +-- Call mcp-k6 validate_script / run_script
+    |  +-- Compare metrics against thresholds
+    |  +-- Call dominator.record_result
     |
     v
+dominator mcp  (MCP server / data plane)
+    |
+    |  dominator.get_nfr        -> read .pass/config.yaml
+    |  dominator.record_result  -> append EventJudgmentRecorded
+    |
 .pass/                   <- Persistent state
     +-- config.yaml           <- Target, NFR thresholds, load config
-    +-- k6-scripts/           <- Generated k6 test scripts
+    +-- k6-scripts/           <- k6 scripts authored outside the Go CLI
     +-- insights/             <- Hue + coefficient insight ledger
     |   +-- hue.md            <- Judgment history
     |   +-- coefficient.md    <- Deviation details
@@ -263,13 +247,14 @@ dominator run --plan-id <id>
 
 | Event Type | Trigger | Description |
 |-----------|---------|-------------|
-| `script.generated` | `generate` completes | k6 script created from API spec |
-| `generation.failed` | `generate` fails | Script generation error |
+| `script.generated` | Legacy / replayed history | k6 script created from API spec before the MCP pivot |
+| `generation.failed` | Legacy / replayed history | Script generation error before the MCP pivot |
 | `plan.created` | `check` completes | Execution plan created |
 | `plan.approved` | `approve` completes | Plan approved for execution |
-| `judged` | `run` completes | Judgment result recorded |
-| `violation.detected` | NFR threshold exceeded | Violation with deviations |
-| `pass.confirmed` | All NFRs pass | Clean judgment |
+| `judgment.recorded` | `dominator.record_result` MCP tool | Session-judged pass/fail result recorded |
+| `judged` | Legacy / replayed history | CLI-driven judgment result before the MCP pivot |
+| `violation.detected` | Legacy / replayed history | Violation with deviations before the MCP pivot |
+| `pass.confirmed` | Legacy / replayed history | Clean judgment before the MCP pivot |
 
 ## Exit Codes
 
@@ -286,8 +271,8 @@ Dominator instruments key operations with OpenTelemetry spans. Tracing is off by
 # Start Jaeger v2 (trace viewer)
 just jaeger
 
-# Run dominator with tracing enabled
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 dominator run --plan-id <id>
+# Run the MCP data plane with tracing enabled
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 dominator mcp
 
 # View traces at http://localhost:16686
 
@@ -335,7 +320,7 @@ Linear Issues ---------> Git Repository -----------> .gate/              -> .pas
 
 - Go 1.26+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
-- [k6](https://k6.io/) (load testing engine)
+- mcp-k6 or an equivalent k6 MCP server attached to the claude-code session
 - [Docker](https://www.docker.com/) (optional, for Jaeger tracing)
 
 Run `dominator doctor` to verify all prerequisites.
