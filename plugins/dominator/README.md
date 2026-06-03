@@ -46,7 +46,7 @@ human. Real domain wiring lands in subsequent commits on
 
 - **dominator** (this plugin) — dominator's own data plane:
   NFR specifications, run history, verdict persistence
-- **mcp-k6** (external, https://github.com/grafana/mcp-k6) —
+- **mcp-k6** (external, <https://github.com/grafana/mcp-k6>) —
   k6 script validation + execution
 
 The session attaches both, the skill orchestrates them. Separating

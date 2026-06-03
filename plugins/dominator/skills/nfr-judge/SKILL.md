@@ -133,9 +133,9 @@ both MCP servers attached:
 
 - Canonical plan: `refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`
 - Pattern reference:
-  - dominator ADR 0003 (`~/tap/dominator/docs/adr/0003-mcp-pivot.md`) — MCP pivot
-  - dominator ADR 0004 (`~/tap/dominator/docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
-  - dominator ADR 0005 (`~/tap/dominator/docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
+    - dominator ADR 0003 (`~/tap/dominator/docs/adr/0003-mcp-pivot.md`) — MCP pivot
+    - dominator ADR 0004 (`~/tap/dominator/docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
+    - dominator ADR 0005 (`~/tap/dominator/docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
 - Billing boundary table: refs 0027 §5
 - Mechanical gate (semgrep rules): refs 0027 §6 + `.semgrep/jun15-no-headless-llm.yaml`
 - D-Mail 9-field schema: refs 0027 §8 + `internal/domain/dmail_envelope.go`
