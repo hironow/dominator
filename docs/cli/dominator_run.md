@@ -1,13 +1,13 @@
 ## dominator run
 
-Deprecated (jun15 MCP pivot): use claude code + mcp-k6 + /nfr-judge
+Retired: use Claude Code + mcp-k6 + /nfr-judge
 
 ### Synopsis
 
-Deprecated by the jun15 MCP pivot (2026-06-15 credit-pool split).
+Retired by the jun15 MCP pivot (2026-06-15 credit-pool split).
 
 k6 load-test execution + NFR judging are no longer driven by a headless
-'claude -p' loop. From a claude code session with the mcp-k6 server
+'claude -p' loop. From a Claude Code session with the mcp-k6 server
 attached, use the /nfr-judge skill: it runs k6 via mcp-k6 and records the
 verdict through dominator's MCP tools (get_nfr, record_result). Start the
 data-plane server with 'dominator mcp'.

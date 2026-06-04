@@ -1,13 +1,13 @@
 ## dominator generate
 
-Deprecated (jun15 MCP pivot): generate k6 scripts via claude code
+Retired: generate k6 scripts via Claude Code
 
 ### Synopsis
 
-Deprecated by the jun15 MCP pivot.
+Retired by the jun15 MCP pivot.
 
 k6 script generation from an API spec is no longer driven by a headless
-'claude -p' loop. Generate scripts from a claude code session (which has
+'claude -p' loop. Generate scripts from a Claude Code session (which has
 the spec-reading + authoring tools) and place them under .pass/k6-scripts/.
 
 ```

@@ -101,7 +101,7 @@ func CheckConfig(configPath string) domain.DoctorCheck {
 //
 // Post jun15 MCP pivot (refs/issues/0027) the doctor no longer probes
 // `claude --print` to enumerate MCP servers. mcp-k6 attachment is now
-// the responsibility of the human operator launching the claude code
+// the responsibility of the human operator launching the Claude Code
 // interactive session (= `claude --mcp-config '{"k6":{...}}'`).
 // Doctor returns Skip with a pivot reason; a follow-up commit will
 // replace this with a probe against the dominator MCP server's
@@ -111,7 +111,7 @@ func CheckMCPK6(_, _ string, _ domain.Logger) domain.DoctorCheck {
 	return domain.DoctorCheck{
 		Name:    "mcp-k6",
 		Status:  domain.CheckSkip,
-		Message: "skipped (post jun15 MCP pivot, refs/issues/0027): mcp-k6 attachment is the responsibility of the claude code session via --mcp-config",
-		Hint:    "launch claude code with `--mcp-config '{\"dominator\":{...},\"k6\":{...}}'` and use /nfr-judge",
+		Message: "skipped (post jun15 MCP pivot, refs/issues/0027): mcp-k6 attachment is the responsibility of the Claude Code session via --mcp-config",
+		Hint:    "launch Claude Code with `--mcp-config '{\"dominator\":{...},\"k6\":{...}}'` and use /nfr-judge",
 	}
 }
