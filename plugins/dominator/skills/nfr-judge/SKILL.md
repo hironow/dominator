@@ -7,7 +7,7 @@ description: >-
   dominator", or "test the dominator MCP server end-to-end". Drives the
   dominator MCP server's tools (get_nfr / record_result) plus the
   external mcp-k6 server's load-test tools from inside a
-  human-initiated claude code interactive session so inference stays on
+  human-initiated Claude Code interactive session so inference stays on
   the subscription quota rather than the Agent SDK credit pool that
   gates `claude -p` from 2026-06-15.
 version: 0.1.0
@@ -32,7 +32,7 @@ allowed-tools:
 Human-initiated entry point. Drives the dominator MCP server's tools
 plus the external mcp-k6 server's load-test tools without ever
 invoking `claude -p`, so all inference happens inside this
-interactive claude code session's subscription quota.
+interactive Claude Code session's subscription quota.
 
 ## Prerequisites
 
@@ -119,7 +119,7 @@ record_result.
 
 ## Done criteria
 
-A `/nfr-judge` run is complete when, in a real claude code session with
+A `/nfr-judge` run is complete when, in a real Claude Code session with
 both MCP servers attached:
 
 1. `ping` returns `pong` (handshake + tool dispatch verified).

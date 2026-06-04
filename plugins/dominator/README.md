@@ -1,8 +1,8 @@
-# dominator claude code plugin (jun15 MCP pivot)
+# dominator Claude Code plugin (MCP pivot)
 
 **Status:** Phase 2c in progress (= MCP server stub + skill skeleton).
-Production target for the post-2026-06-15 architecture where claude
-code interactive sessions own LLM inference and the dominator Go CLI
+Production target for the post-2026-06-15 architecture where Claude
+Code interactive sessions own LLM inference and the dominator Go CLI
 exposes its NFR config + k6 run history as an MCP server. Pattern
 referenced from paintress Phase 1 (ADR 0017) + sightjack Phase 2a
 (ADR 0018) + amadeus Phase 2b (ADR 0026).
