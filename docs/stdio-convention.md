@@ -8,9 +8,9 @@ Dominator follows the Unix convention of separating machine-readable data from h
 |--------|---------|----------------|
 | **stdout** | Machine-readable output (JSON, judgment results) | `cmd.OutOrStdout()` |
 | **stderr** | Human-readable progress, logs, errors | `platform.Logger` via `cmd.ErrOrStderr()` |
-| **stdin** | Prompt input to Claude CLI subprocess only | `ClaudeRunner.Run()` internal |
+| **stdin** | JSON-RPC input for `dominator mcp`; optional confirmations for selected commands | `cmd.InOrStdin()` / MCP server |
 
-The core dominator library does not read from stdin. Some CLI commands (such as `archive-prune`) optionally read from stdin for confirmations.
+The core dominator library does not read arbitrary prompt text from stdin. The MCP server reads JSON-RPC 2.0 requests from stdin by design, and some CLI commands (such as `archive-prune`) optionally read from stdin for confirmations.
 
 ## Cobra Wiring
 

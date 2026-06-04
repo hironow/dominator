@@ -47,7 +47,7 @@ Format: `KEY=VALUE` with `${VAR}` expansion and `#` comments.
 
 ## GenAI Semantic Conventions
 
-Dominator emits GenAI semantic convention attributes on `claude.invoke` spans during script generation:
+Dominator's MCP data plane does not invoke LLMs directly and does not emit `gen_ai.*` attributes during normal CLI execution. Historical `claude.invoke` / `gen_ai.*` telemetry is retained only where session streams or compatibility fixtures are parsed.
 
 - `gen_ai.operation.name=chat`
 - `gen_ai.system=anthropic`
@@ -65,15 +65,15 @@ Each tool's telemetry tests verify conformance to prevent drift.
 | Span name | Yes | Tool-specific operation name |
 | `otel.status_code` | Yes | OK on success, ERROR on failure |
 
-### claude.invoke Span
+### Claude Code Session Telemetry
 
 | Attribute | Required | Description |
 |-----------|----------|-------------|
-| `claude.model` | Yes | Model name (e.g. "opus") |
-| `claude.timeout_sec` | Yes | Timeout in seconds |
-| `gen_ai.operation.name` | Yes | Always "chat" |
-| `gen_ai.system` | Yes | Always "anthropic" |
-| `gen_ai.request.model` | Yes | Model name |
+| `claude.model` | Compatibility | Model name from a session stream or fixture |
+| `claude.timeout_sec` | Compatibility | Timeout from a session stream or fixture |
+| `gen_ai.operation.name` | Compatibility | Chat operation name when session telemetry is present |
+| `gen_ai.system` | Compatibility | Provider identifier when session telemetry is present |
+| `gen_ai.request.model` | Compatibility | Model name when session telemetry is present |
 
 ### Verification
 
