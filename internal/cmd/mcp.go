@@ -23,7 +23,7 @@ import (
 // emitter is wired).
 //
 // Note: dominator uses mcp-k6 (an external MCP server) for k6 load
-// test execution. That MCP server is attached to the claude code
+// test execution. That MCP server is attached to the Claude Code
 // session directly (= `claude mcp add k6 -- mcp-k6 --transport
 // stdio`); `dominator mcp` is a separate server exposing dominator's
 // own data plane (NFR config + run history).
@@ -34,7 +34,7 @@ func newMCPCommand() *cobra.Command {
 		Long: `Start a Model Context Protocol server reading JSON-RPC 2.0
 messages on stdin and writing responses on stdout.
 
-Designed for embedding in a claude code interactive session via
+Designed for embedding in a Claude Code interactive session via
 --mcp-config so inference stays on the session's subscription quota
 rather than crossing into the Agent SDK credit pool that gates
 'claude -p' from 2026-06-15.
@@ -46,8 +46,8 @@ emitter is wired; preview-only otherwise).
 
 This MCP server exposes dominator's data plane (NFR config + run
 history). For k6 load test execution, attach the external mcp-k6
-server separately to the same claude code session.`,
-		Example: `  # Launch claude code with the dominator MCP server attached
+server separately to the same Claude Code session.`,
+		Example: `  # Launch Claude Code with the dominator MCP server attached
   claude --mcp-config '{"dominator":{"command":"dominator","args":["mcp"]}}'
 
   # Pipe a tools/list request manually (for debugging)

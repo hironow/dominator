@@ -84,11 +84,11 @@ Running `dominator` without a subcommand shows usage help.
 |---------|-------------|
 | `init` | Initialize `.pass/` directory |
 | `mcp` | Start the MCP server (data plane: ping / get_nfr / record_result) |
-| `generate` | Deprecated stub; generate scripts from the claude-code session |
+| `generate` | Retired redirect; generate scripts from the Claude Code session |
 | `check` | Local helper: create a plan from existing k6 scripts |
 | `approve` | Local helper: approve an existing plan |
-| `run` | Deprecated stub; run k6 via claude-code + mcp-k6 + `/nfr-judge` |
-| `validate` | Deprecated stub; validate k6 scripts via claude-code + mcp-k6 |
+| `run` | Retired redirect; run k6 via Claude Code + mcp-k6 + `/nfr-judge` |
+| `validate` | Retired redirect; validate k6 scripts via Claude Code + mcp-k6 |
 | `insights` | Display judgment insights (hue and coefficient) |
 | `inbox` | Process incoming D-Mail messages |
 | `config show` / `config set` | View or update configuration |

@@ -26,14 +26,14 @@ dominator [flags]
 * [dominator clean](dominator_clean.md)	 - Remove state directory (.pass/)
 * [dominator config](dominator_config.md)	 - Manage dominator configuration
 * [dominator doctor](dominator_doctor.md)	 - Run health checks
-* [dominator generate](dominator_generate.md)	 - Deprecated (jun15 MCP pivot): generate k6 scripts via claude code
+* [dominator generate](dominator_generate.md)	 - Retired: generate k6 scripts via Claude Code
 * [dominator inbox](dominator_inbox.md)	 - Process incoming D-Mail messages
 * [dominator init](dominator_init.md)	 - Initialize .pass directory
 * [dominator insights](dominator_insights.md)	 - Display judgment insights (hue and coefficient)
 * [dominator mcp](dominator_mcp.md)	 - Run dominator as an MCP server over stdio (NFR data plane: get_nfr + record_result)
-* [dominator run](dominator_run.md)	 - Deprecated (jun15 MCP pivot): use claude code + mcp-k6 + /nfr-judge
+* [dominator run](dominator_run.md)	 - Retired: use Claude Code + mcp-k6 + /nfr-judge
 * [dominator status](dominator_status.md)	 - Show dominator operational status
 * [dominator update](dominator_update.md)	 - Self-update dominator to the latest release
-* [dominator validate](dominator_validate.md)	 - Deprecated (jun15 MCP pivot): validate k6 scripts via claude code + mcp-k6
+* [dominator validate](dominator_validate.md)	 - Retired: validate k6 scripts via Claude Code + mcp-k6
 * [dominator version](dominator_version.md)	 - Print version, commit, and build information
 

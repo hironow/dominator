@@ -26,7 +26,7 @@ const (
 
 	// jun15 MCP pivot Phase 4 follow-up: session-initiated judgment record.
 	// Emitted by the dominator.record_result MCP tool when a human-initiated
-	// claude code session reports an externally-judged (mcp-k6) verdict.
+	// Claude Code session reports an externally-judged (mcp-k6) verdict.
 	// Distinct from EventJudged because it carries no k6 metrics (the
 	// session judged externally; only the verdict + summary is recorded).
 	EventJudgmentRecorded EventType = "judgment.recorded"

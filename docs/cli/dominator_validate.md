@@ -1,13 +1,13 @@
 ## dominator validate
 
-Deprecated (jun15 MCP pivot): validate k6 scripts via claude code + mcp-k6
+Retired: validate k6 scripts via Claude Code + mcp-k6
 
 ### Synopsis
 
-Deprecated by the jun15 MCP pivot.
+Retired by the jun15 MCP pivot.
 
 k6 script validation is no longer driven by a headless 'claude -p' loop.
-Validate scripts from a claude code session with the mcp-k6 server
+Validate scripts from a Claude Code session with the mcp-k6 server
 attached (mcp-k6 exposes validate_script); see the /nfr-judge skill.
 
 ```
