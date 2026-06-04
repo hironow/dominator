@@ -5,13 +5,13 @@ Referenced from [README.md](../README.md) and [docs/README.md](README.md).
 
 | Aspect | Description |
 |--------|-------------|
-| **What** | NFR validation system that judges system quality via k6 load testing and routes corrective D-Mails |
-| **Why** | Detect non-functional requirement violations early with objective, automated load testing rather than subjective assessment |
-| **How** | Generate k6 scripts from API specs via Claude Code -> create execution plans -> human approval -> execute k6 -> evaluate NFR thresholds -> record hue/coefficient insights -> emit D-Mails by severity |
-| **Input** | API specifications (OpenAPI, JSON-RPC, WebSocket, HTTP docs), NFR thresholds (config.yaml), inbox D-Mails |
-| **Output** | Judgment results (pass/violation), D-Mails (design-feedback / implementation-feedback / verification-feedback / nfr-pass), insight ledger (hue.md, coefficient.md) |
-| **Telemetry** | OTel spans: `dominator.run`, `dominator.generate`, `claude.invoke` (with `claude.model`, `claude.timeout_sec`, `gen_ai.*`) |
-| **External Systems** | Claude Code subprocess, k6 load testing engine, OTel exporter (Jaeger/Weave) |
+| **What** | MCP server + data plane for NFR judgment: serves configured NFR thresholds and records externally judged k6 results |
+| **Why** | Keep NFR evidence in the shared event store while ensuring k6 execution and any LLM reasoning happen inside a human-initiated claude-code session |
+| **How** | `dominator mcp` serves MCP tools (`get_nfr`, `record_result`); the `/nfr-judge` skill drives mcp-k6 from the claude-code session and records the verdict through `dominator.record_result` |
+| **Input** | `.pass/config.yaml`, event store, MCP tool arguments, externally judged k6 result summaries |
+| **Output** | MCP tool responses and `EventJudgmentRecorded` entries in the event store |
+| **Telemetry** | OTel spans on command roots and MCP tool handlers; MCP invocation metrics support post-jun15 cost verification |
+| **External Systems** | Local filesystem, external mcp-k6 server attached to the claude-code session, OTel exporter (Jaeger/Weave), claude-code session as MCP client |
 
 ## Layer Architecture
 
@@ -52,3 +52,14 @@ Ref: `.semgrep/layers.yaml`, ADR S0029
 ## Cross-Tool Conformance
 
 All tools (phonewave, sightjack, paintress, amadeus, dominator) maintain a What/Why/How conformance table in `docs/conformance.md` with the same structure. This prevents expression drift across README files.
+
+## MCP Pivot Boundary
+
+Dominator no longer starts Claude or k6 from the Go CLI. The old `generate`, `run`, and `validate` commands are deprecation stubs; `check` and `approve` remain local data-plane helpers for existing k6 scripts and plan metadata.
+
+- `dominator mcp` implements the MCP lifecycle (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`) over stdio.
+- `dominator.get_nfr` reads the NFR thresholds from `.pass/config.yaml`.
+- `dominator.record_result` records a pass/fail verdict from the claude-code session as `EventJudgmentRecorded`.
+- The `/nfr-judge` skill drives mcp-k6 and performs result comparison from the claude-code session.
+
+Ref: ADR 0003, ADR 0004, ADR 0005, `internal/session/mcp_server.go`, `plugins/dominator/skills/nfr-judge/SKILL.md`
