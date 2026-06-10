@@ -8,3 +8,12 @@ import "embed"
 //
 //go:embed all:templates/claude-skills
 var ClaudeSkillsFS embed.FS
+
+// SkillsFS embeds the D-Mail routing manifests that `dominator init`
+// materializes into .pass/skills/ for phonewave route derivation —
+// extracted from inline strings in session/state.go so the manifests
+// share the sibling tools' template-file source of truth (refs issue
+// 0035).
+//
+//go:embed all:templates/skills
+var SkillsFS embed.FS
