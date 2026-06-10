@@ -1,16 +1,16 @@
 ---
 name: nfr-judge
 description: >-
-  Slash command for the dominator NFR judge (refs/issues/0027 jun15
-  MCP pivot). Triggers when the user types "/nfr-judge", asks to
-  "run a k6 NFR judgement via dominator", "check NFR thresholds with
-  dominator", or "test the dominator MCP server end-to-end". Drives the
-  dominator MCP server's tools (get_nfr / record_result) plus the
-  external mcp-k6 server's load-test tools from inside a
-  human-initiated Claude Code interactive session so inference stays on
-  the subscription quota rather than the Agent SDK credit pool that
-  gates `claude -p` from 2026-06-15.
-version: 0.1.0
+  Slash command for the dominator NFR judge (jun15 MCP pivot). Triggers
+  when the user types "/nfr-judge", asks to "run a k6 NFR judgement via
+  dominator", "check NFR thresholds with dominator", "NFR 判定して", or
+  "test the dominator MCP server end-to-end". Drives the dominator MCP
+  server's tools (get_nfr / record_result) plus the external mcp-k6
+  server's load-test tools from inside a human-initiated Claude Code
+  interactive session so inference stays on the subscription quota
+  rather than the Agent SDK credit pool that gates `claude -p` from
+  2026-06-15.
+version: 0.2.0
 argument-hint: "(none) - fetches the NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
 allowed-tools:
   - Read
@@ -33,6 +33,14 @@ Human-initiated entry point. Drives the dominator MCP server's tools
 plus the external mcp-k6 server's load-test tools without ever
 invoking `claude -p`, so all inference happens inside this
 interactive Claude Code session's subscription quota.
+
+## Execution principle: one invocation = one judgment
+
+One `/nfr-judge` run judges **exactly one target**, then stops and
+reports back to the human. Do not loop into the next target
+automatically — the human re-invokes the slash command per target.
+Load tests put real pressure on real systems; pacing them through a
+human keeps the loop safe.
 
 ## Prerequisites
 
@@ -63,9 +71,14 @@ record_result.
    is not attached — abort and ask the human to relaunch claude
    with `--mcp-config`.
 
-2. **Fetch the NFR target**. Call `mcp__dominator__dominator_get_nfr`
-   with `{"target_id": "<id>"}` (= human supplies the target). The
-   tool reads `.pass/config.yaml` and returns the NFR thresholds:
+2. **Determine the target**. The human normally supplies `target_id`.
+   If they did not, `Read` `.pass/config.yaml`, list the configured
+   target ids to the human, and ask them to pick one — do not pick a
+   load-test target on your own.
+
+3. **Fetch the NFR thresholds**. Call
+   `mcp__dominator__dominator_get_nfr` with `{"target_id": "<id>"}`.
+   The tool reads `.pass/config.yaml` and returns:
 
    ```json
    {
@@ -81,32 +94,66 @@ record_result.
    surface the `reason` and abort — the human must run `dominator mcp`
    from a project root with a valid NFR config.
 
-3. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
-   script path for the target.
+4. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
+   script for the target (from `.pass/k6-scripts/`; author or fix it in
+   the session if missing/stale). Do not run an invalid script.
 
-4. **Run the k6 load test**. Call `mcp__k6__run_script` with the
-   validated script. Capture stdout / metrics.
+5. **Run the k6 load test**. Call `mcp__k6__run_script` with the
+   validated script. Capture the metrics output.
 
-5. **Judge pass/fail against thresholds**. The session's reasoning
-   compares the captured metrics against the `nfr` thresholds returned
-   in step 2. The judgement happens inside the human-initiated claude
-   code session — no `claude -p` invocation is allowed.
+6. **Judge pass/fail against thresholds**. Compare every captured
+   metric against the `nfr` thresholds from step 3 inside this session
+   — no `claude -p`. Build the comparison table for the report (one
+   row per threshold):
 
-6. **Record the verdict**. Call
+   | NFR axis | metric | threshold | actual | verdict |
+   |---|---|---|---|---|
+
+   The overall verdict is `pass` only when every individual threshold
+   passes; otherwise `fail` (list the failing rows).
+
+7. **Record the verdict**. Call
    `mcp__dominator__dominator_record_result` with
-   `{"target_id": ..., "verdict": "pass"|"fail", "summary": ...}`.
-   The tool persists an `EventJudgmentRecorded` to the event store and
-   returns `{"persisted": true, "recorded": true, "persistence": "event-store"}`.
+   `{"target_id": ..., "verdict": "pass"|"fail", "summary": ...}` —
+   put the failing-row digest in `summary`. The tool persists an
+   `EventJudgmentRecorded` to the event store and returns
+   `{"persisted": true, "recorded": true, "persistence": "event-store"}`.
    (If the MCP server was started without a writable `.pass/` dir it
-   falls back to `persistence: "preview-only"` with `recorded: false`.)
+   falls back to `persistence: "preview-only"` with `recorded: false` —
+   report that explicitly; the judgment is then NOT durably recorded.)
+
+8. **Report**. End with: target id, the threshold-vs-actual table, the
+   recorded verdict + persistence mode, and what the human should do
+   next (fix and re-judge / move to the next target). Feedback D-Mail
+   to the designer/implementer is out of scope until an emission MCP
+   tool exists (refs issue 0031) — say so when a `fail` verdict would
+   normally trigger one.
+
+## Failure paths
+
+- **MCP tool error mid-run**: report the tool name and the `reason`
+  field, stop. Retry at most once for transient errors.
+- **k6 validation failure**: fix the script in-session if the cause is
+  obvious (syntax, missing import); otherwise report and stop. Never
+  run an invalid script "to see what happens".
+- **Load test aborts mid-run**: do NOT record a verdict from partial
+  metrics — report the abort and stop (a judgment from incomplete
+  evidence is worse than no judgment).
+
+## Re-run idempotency
+
+Re-invoking `/nfr-judge` after a partial run is safe: no state is
+persisted until `record_result`, and recording again for the same
+target appends a new judgment event (the event store is append-only;
+`insights` aggregates the history). Avoid recording two verdicts for
+the same k6 run — one run, one verdict.
 
 ## What this skill must NOT do
 
 - Invoke `claude -p`, `claude --print`, the Anthropic Agent SDK, or
-  any shell wrapper that does so (= refs/issues/0027 §5 billing
-  boundary). The repo-wide semgrep gate
-  (`.semgrep/jun15-no-headless-llm.yaml`) blocks these patterns in
-  production code.
+  any shell wrapper that does so (= billing boundary). The repo-wide
+  semgrep gate (`.semgrep/jun15-no-headless-llm.yaml`) blocks these
+  patterns in production code.
 - Auto-trigger inference from a SessionStart hook or any other
   non-human-initiated path. The slash command typed by a human is
   the only valid entry to this workflow.
@@ -116,6 +163,9 @@ record_result.
 - Run k6 directly via `bash` / `Bash` — use `mcp__k6__run_script`
   exclusively so the audit trail (= OTel `messaging.*` attrs) stays
   consistent.
+- Emit a feedback D-Mail by writing to `outbox/` directly (transactional
+  outbox bypass). A `dominator.dmail` emission tool does not exist yet
+  — tracked in refs issue 0031.
 
 ## Done criteria
 
@@ -128,14 +178,18 @@ both MCP servers attached:
 4. `record_result` returns `persisted: true` / `persistence: "event-store"`,
    and the verdict shows up in `dominator status` (EventJudgmentRecorded
    read model).
+5. The closing report (target / threshold table / verdict / next step)
+   is delivered to the human.
 
 ## Related
 
-- Canonical plan: `refs/HTMLification/docs/archive/0027-jun15-mcp-pivot.html`
+- Canonical plan: `http://localhost:8765/docs/archive/0027-jun15-mcp-pivot.html` (refs)
+- refs restructure + skill review: `http://localhost:8765/docs/issues/0030-refs-attic-restructure.html`
+- D-Mail emission tool gap: `http://localhost:8765/docs/issues/0031-mcp-tool-surface-gaps.html`
 - Pattern reference:
-    - dominator ADR 0003 (`~/tap/dominator/docs/adr/0003-mcp-pivot.md`) — MCP pivot
-    - dominator ADR 0004 (`~/tap/dominator/docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
-    - dominator ADR 0005 (`~/tap/dominator/docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
-- Billing boundary table: refs 0027 §5
-- Mechanical gate (semgrep rules): refs 0027 §6 + `.semgrep/jun15-no-headless-llm.yaml`
-- D-Mail 9-field schema: refs 0027 §8 + `internal/domain/dmail_envelope.go`
+    - dominator ADR 0003 (`docs/adr/0003-mcp-pivot.md`) — MCP pivot
+    - dominator ADR 0004 (`docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
+    - dominator ADR 0005 (`docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
+- Self-improvement loop: `docs/self-improvement-loop.md`
+- Mechanical gate (semgrep rules): `.semgrep/jun15-no-headless-llm.yaml`
+- D-Mail 9-field schema: `internal/domain/dmail_envelope.go`
