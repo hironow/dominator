@@ -1,33 +1,24 @@
 ## dominator approve
 
-Approve an execution plan
+Retired: judge NFRs via Claude Code + mcp-k6 + /nfr-judge
 
 ### Synopsis
 
-Approve a previously created execution plan for load testing.
+Retired by the jun15 MCP pivot (refs issue 0034).
 
-The --plan-id flag specifies which plan to approve. The approved plan JSON
-is output to stdout.
+Plan approval gated the retired 'dominator run' loop. The human-in-the-
+loop control it provided lives in the Claude Code session now: the human
+invokes /nfr-judge, and the session records the verdict via record_result.
 
 ```
 dominator approve [path] [flags]
-```
-
-### Examples
-
-```
-  # Approve a plan by ID
-  dominator approve --plan-id abc123
-
-  # Approve in a specific directory
-  dominator approve --plan-id abc123 /path/to/project
 ```
 
 ### Options
 
 ```
   -h, --help             help for approve
-      --plan-id string   Plan ID to approve (required)
+      --plan-id string   retired flag (plans are no longer staged)
 ```
 
 ### Options inherited from parent commands

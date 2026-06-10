@@ -1,27 +1,19 @@
 ## dominator check
 
-Create an execution plan from k6 scripts
+Retired: judge NFRs via Claude Code + mcp-k6 + /nfr-judge
 
 ### Synopsis
 
-Inspect available k6 scripts and create an execution plan for load testing.
+Retired by the jun15 MCP pivot (refs issue 0034).
 
-Reads configuration and lists k6 scripts in .pass/k6-scripts/. If scripts are
-found, a Plan is created and saved to .pass/.run/plans/. The plan JSON is
-output to stdout for piping to other tools.
+Execution plans are no longer staged in the Go CLI: their only consumer
+('dominator run') was retired with the pivot. Judge NFR targets from a
+Claude Code session via the /nfr-judge skill, which reads thresholds with
+get_nfr, runs k6 through mcp-k6, and records the verdict with
+record_result.
 
 ```
 dominator check [path] [flags]
-```
-
-### Examples
-
-```
-  # Check current directory
-  dominator check
-
-  # Check a specific project directory
-  dominator check /path/to/project
 ```
 
 ### Options

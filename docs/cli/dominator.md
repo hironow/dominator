@@ -20,9 +20,9 @@ dominator [flags]
 
 ### SEE ALSO
 
-* [dominator approve](dominator_approve.md)	 - Approve an execution plan
+* [dominator approve](dominator_approve.md)	 - Retired: judge NFRs via Claude Code + mcp-k6 + /nfr-judge
 * [dominator archive-prune](dominator_archive-prune.md)	 - Prune old archived files
-* [dominator check](dominator_check.md)	 - Create an execution plan from k6 scripts
+* [dominator check](dominator_check.md)	 - Retired: judge NFRs via Claude Code + mcp-k6 + /nfr-judge
 * [dominator clean](dominator_clean.md)	 - Remove state directory (.pass/)
 * [dominator config](dominator_config.md)	 - Manage dominator configuration
 * [dominator doctor](dominator_doctor.md)	 - Run health checks
