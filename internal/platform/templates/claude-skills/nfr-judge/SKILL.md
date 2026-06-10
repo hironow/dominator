@@ -1,17 +1,16 @@
 ---
 name: nfr-judge
 description: >-
-  Slash command for the dominator NFR judge (jun15 MCP pivot). Triggers
-  when the user types "/nfr-judge", asks to "run a k6 NFR judgement via
-  dominator", "check NFR thresholds with dominator", "NFR 判定して", or
-  "test the dominator MCP server end-to-end". Drives the dominator MCP
-  server's tools (get_nfr / record_result) plus the external mcp-k6
-  server's load-test tools from inside a human-initiated Claude Code
-  interactive session so inference stays on the subscription quota
-  rather than the Agent SDK credit pool that gates `claude -p` from
-  2026-06-15.
-version: 0.3.1
-argument-hint: "(none) - fetches the NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
+  Run one NFR judgment (human-invoked /nfr-judge; 「NFR 判定して」):
+  fetch thresholds, consult judgment history, run k6 through the
+  external mcp-k6 server, judge pass/fail in-session, record the
+  verdict, and emit feedback d-mails on fail — via the dominator MCP
+  tools (ping / get_nfr / get_insights / record_result / dmail) plus
+  mcp__k6__{validate_script,run_script}. One invocation = one
+  judgment. All inference stays inside this interactive session
+  (jun15 billing invariant; see body).
+version: 0.3.2
+argument-hint: "[target_id] (optional — lists configured targets if omitted)"
 disable-model-invocation: true
 allowed-tools:
   - Read
@@ -20,7 +19,6 @@ allowed-tools:
   - Bash
   - Grep
   - Glob
-  - Agent
   - mcp__dominator__ping
   - mcp__dominator__get_insights
   - mcp__dominator__get_nfr
@@ -69,27 +67,22 @@ cd path/to/dominator && go build -o ./dist/dominator ./cmd/dominator
 `dominator mcp` must be started from the project root so it can resolve
 the `.pass/` state dir (NFR config + event store). The MCP server
 answers the `initialize` handshake, then exposes ping / get_nfr /
-record_result.
+get_insights / record_result / dmail.
 
 ## Workflow
 
-1. **Verify MCP wiring**. Call `mcp__dominator__ping`. The
-   tool must return `pong`. If it errors, the dominator MCP server
-   is not attached — abort and ask the human to relaunch claude
-   with `--mcp-config`.
+1. **Verify MCP wiring — both servers**. Call `mcp__dominator__ping`
+   (must return `pong`) and confirm `mcp__k6__validate_script` /
+   `mcp__k6__run_script` appear in the available tool list. If either
+   server is missing, abort and ask the human to relaunch claude with
+   both servers in `--mcp-config` — never substitute Bash k6.
 
 2. **Determine the target**. The human normally supplies `target_id`.
    If they did not, `Read` `.pass/config.yaml`, list the configured
    target ids to the human, and ask them to pick one — do not pick a
    load-test target on your own.
 
-3. **Consult the learning loop**. Call `mcp__dominator__get_insights`
-   with no arguments. Repeated `fail` verdicts on the same target in
-   `live_judgments` indicate a persistent NFR gap — scrutinize that
-   target's thresholds and prior deviations (legacy hue/coefficient
-   ledgers) before re-judging. Empty result = no history yet, proceed.
-
-4. **Fetch the NFR thresholds**. Call
+3. **Fetch the NFR thresholds**. Call
    `mcp__dominator__get_nfr` with `{"target_id": "<id>"}`.
    The tool reads `.pass/config.yaml` and returns:
 
@@ -106,6 +99,15 @@ record_result.
    If `initialized` is `false` (no `.pass/config.yaml` or load error),
    surface the `reason` and abort — the human must run `dominator mcp`
    from a project root with a valid NFR config.
+
+4. **Consult the learning loop**. Call `mcp__dominator__get_insights`
+   with no arguments. Repeated `fail` verdicts on the same target in
+   `live_judgments` indicate a persistent NFR gap — apply extra
+   scrutiny to that target's thresholds (from step 3) and prior
+   deviations (legacy hue/coefficient ledgers) in the step 7
+   comparison. A get_insights error is non-fatal: note it in the
+   report and proceed with default scrutiny. Empty result = no
+   history yet, proceed.
 
 5. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
    script for the target (from `.pass/k6-scripts/`; author or fix it in
@@ -138,7 +140,7 @@ record_result.
 9. **Emit feedback d-mails on fail**. When the verdict is `fail`,
    call `mcp__dominator__dmail` with
    `{kind: "implementation-feedback"|"design-feedback"|"report",
-   name: "dom-<kind>-<target>-<ts>", description, body (the
+   name: "dom-<kind>-<target>" (stable per target/kind — a retried fail upserts instead of duplicating), description, body (the
    threshold-vs-actual table), severity}` so the implementer/designer
    receives the findings via phonewave. Re-sending the same name is an
    idempotent upsert.
@@ -149,6 +151,9 @@ record_result.
    target).
 
 ## Failure paths
+
+- **mcp-k6 tools unavailable mid-run**: abort and ask the human to
+  attach mcp-k6 — never substitute Bash k6.
 
 - **MCP tool error mid-run**: report the tool name and the `reason`
   field, stop. Retry at most once for transient errors.
@@ -164,7 +169,7 @@ record_result.
 Re-invoking `/nfr-judge` after a partial run is safe: no state is
 persisted until `record_result`, and recording again for the same
 target appends a new judgment event (the event store is append-only;
-`insights` aggregates the history). Avoid recording two verdicts for
+`get_insights` aggregates the history). Avoid recording two verdicts for
 the same k6 run — one run, one verdict.
 
 ## What this skill must NOT do
@@ -177,7 +182,7 @@ the same k6 run — one run, one verdict.
   non-human-initiated path. The slash command typed by a human is
   the only valid entry to this workflow.
 - Persist a result by writing to `.pass/events/` directly. The
-  `dominator.record_result` MCP tool is the canonical path; it
+  `record_result` MCP tool is the canonical path; it
   encapsulates the transactional event-source append (ADR 0005).
 - Run k6 directly via `bash` / `Bash` — use `mcp__k6__run_script`
   exclusively so the audit trail (= OTel `messaging.*` attrs) stays
@@ -197,18 +202,18 @@ both MCP servers attached:
 4. `record_result` returns `persisted: true` / `persistence: "event-store"`,
    and the verdict shows up in `dominator status` (EventJudgmentRecorded
    read model).
-5. The closing report (target / threshold table / verdict / next step)
-   is delivered to the human.
+5. On a `fail` verdict, the feedback d-mail is emitted via `dmail`
+   (`persistence: "transactional-outbox"`).
+6. The closing report (target / threshold table / verdict / d-mails /
+   next step) is delivered to the human.
 
 ## Related
 
-- Canonical plan: `http://localhost:8765/docs/archive/0027-jun15-mcp-pivot.html` (refs)
-- refs restructure + skill review: `http://localhost:8765/docs/issues/0030-refs-attic-restructure.html`
-- D-Mail emission tool gap: `http://localhost:8765/docs/issues/0031-mcp-tool-surface-gaps.html`
-- Pattern reference:
-    - dominator ADR 0003 (`docs/adr/0003-mcp-pivot.md`) — MCP pivot
-    - dominator ADR 0004 (`docs/adr/0004-mcp-pivot-k6-adapter-stub.md`) — K6MCPAdapter stub
-    - dominator ADR 0005 (`docs/adr/0005-record-result-event-store-wiring.md`) — record_result event store wiring
-- Self-improvement loop: `docs/self-improvement-loop.md`
-- Mechanical gate (semgrep rules): `.semgrep/jun15-no-headless-llm.yaml`
-- D-Mail 9-field schema: `internal/domain/dmail_envelope.go`
+(Paths below live in the dominator source repo / the operator's local
+refs server — not in the project this skill is materialized into.)
+
+- Canonical pivot plan: refs archive 0027 (`http://localhost:8765/docs/archive/0027-jun15-mcp-pivot.html`, refs server)
+- D-Mail emission tools: refs archive 0031 (`http://localhost:8765/docs/archive/0031-mcp-tool-surface-gaps.html`, refs server)
+- Pattern reference (in the dominator repo): ADR 0003 "MCP pivot", ADR 0005 "record_result event store wiring", ADR 0007 "learning-loop read exposure"
+- Self-improvement loop + semgrep gate: dominator repo docs/self-improvement-loop.md / .semgrep/jun15-no-headless-llm.yaml
+- D-Mail envelope schema: see the `dmail` tool's input schema (tools/list)
