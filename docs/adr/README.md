@@ -59,3 +59,4 @@
 | [0005](0005-record-result-event-store-wiring.md) | record_result event store wiring (Phase 4 follow-up) |
 | [0006](0006-mcp-write-tools-and-project-wiring.md) | MCP dmail emission and project wiring |
 | [0007](0007-learning-loop-read-exposure.md) | Learning-Loop Read Exposure (get_insights) |
+| [0008](0008-retire-plan-staging.md) | Retire the Plan-Staging Commands (check / approve) |

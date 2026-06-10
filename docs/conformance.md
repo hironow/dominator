@@ -55,7 +55,7 @@ All tools (phonewave, sightjack, paintress, amadeus, dominator) maintain a What/
 
 ## MCP Pivot Boundary
 
-Dominator no longer starts Claude or k6 from the Go CLI. The old `generate`, `run`, and `validate` commands are deprecation stubs; `check` and `approve` remain local data-plane helpers for existing k6 scripts and plan metadata.
+Dominator no longer starts Claude or k6 from the Go CLI. The old `generate`, `run`, and `validate` commands are deprecation stubs; `check` and `approve` are retirement stubs (refs issue 0034): plans had no consumer once `run` was retired, so the plan-staging flow redirects to the /nfr-judge skill.
 
 - `dominator mcp` implements the MCP lifecycle (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`) over stdio.
 - `get_nfr` reads the NFR thresholds from `.pass/config.yaml`.

@@ -158,55 +158,6 @@ func TestInitCmd_CreatesRunDir(t *testing.T) {
 	}
 }
 
-func TestCheckCmd_OutputContainsPlanID(t *testing.T) {
-	dir := t.TempDir()
-	passDir := filepath.Join(dir, ".pass")
-	for _, sub := range []string{".run", "events", "k6-scripts"} {
-		os.MkdirAll(filepath.Join(passDir, sub), 0o755)
-	}
-	os.WriteFile(filepath.Join(passDir, "k6-scripts", "test.js"), []byte("// k6"), 0o644)
-	cfgContent := `lang: en
-claude_cmd: claude
-model: opus
-timeout_sec: 60
-load:
-  vus: 10
-  duration: "30s"
-nfr:
-  performance:
-    p95_latency_ms: 500
-    error_rate_percent: 1.0
-  reliability:
-    success_rate_percent: 99.0
-  scalability:
-    target_rps: 100
-approval:
-  required: true
-`
-	os.WriteFile(filepath.Join(passDir, "config.yaml"), []byte(cfgContent), 0o644)
-	t.Chdir(dir)
-
-	rootCmd := cmd.NewRootCommand()
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	rootCmd.SetOut(stdout)
-	rootCmd.SetErr(stderr)
-	rootCmd.SetArgs([]string{"check"})
-
-	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("check: %v", err)
-	}
-
-	var result struct {
-		PlanID string `json:"plan_id"`
-	}
-	json.Unmarshal(stdout.Bytes(), &result)
-	if result.PlanID == "" {
-		t.Error("expected plan_id in check output")
-	}
-}
-
 func TestArchivePruneCmd_SubcommandExists(t *testing.T) {
 	rootCmd := cmd.NewRootCommand()
 	found := false
@@ -448,62 +399,6 @@ func TestInitCmd_OutputsJSON(t *testing.T) {
 		t.Fatalf("init failed: %v", err)
 	}
 	// init may output to stderr, that's OK
-}
-
-func TestCheckCmd_PlanNFRFields(t *testing.T) {
-	dir := t.TempDir()
-	passDir := filepath.Join(dir, ".pass")
-	for _, sub := range []string{".run", "events", "k6-scripts"} {
-		os.MkdirAll(filepath.Join(passDir, sub), 0o755)
-	}
-	os.WriteFile(filepath.Join(passDir, "k6-scripts", "perf.js"), []byte("// k6"), 0o644)
-	cfgContent := `lang: en
-claude_cmd: claude
-model: opus
-timeout_sec: 60
-load:
-  vus: 25
-  duration: "45s"
-nfr:
-  performance:
-    p95_latency_ms: 300
-    error_rate_percent: 0.5
-  reliability:
-    success_rate_percent: 99.5
-  scalability:
-    target_rps: 200
-approval:
-  required: false
-`
-	os.WriteFile(filepath.Join(passDir, "config.yaml"), []byte(cfgContent), 0o644)
-	t.Chdir(dir)
-
-	rootCmd := cmd.NewRootCommand()
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	rootCmd.SetOut(stdout)
-	rootCmd.SetErr(stderr)
-	rootCmd.SetArgs([]string{"check"})
-
-	err := rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("check: %v", err)
-	}
-
-	// Verify output is valid JSON with expected fields
-	var planMap map[string]any
-	if err := json.Unmarshal(stdout.Bytes(), &planMap); err != nil {
-		t.Fatalf("invalid JSON: %v", err)
-	}
-	if _, ok := planMap["plan_id"]; !ok {
-		t.Error("expected plan_id in output")
-	}
-	if _, ok := planMap["load"]; !ok {
-		t.Error("expected load in output")
-	}
-	if _, ok := planMap["nfr"]; !ok {
-		t.Error("expected nfr in output")
-	}
 }
 
 func TestConfigCmd_ShowFailsWithoutInit(t *testing.T) {

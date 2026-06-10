@@ -2,79 +2,49 @@ package cmd_test
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hironow/dominator/internal/cmd"
 )
 
+// approve is a retirement stub since the jun15 MCP pivot follow-up
+// (refs issue 0034); see check_test.go.
+
 func TestApproveCmd_SubcommandExists(t *testing.T) {
 	// given
-	rootCmd := cmd.NewRootCommand()
+	root := cmd.NewRootCommand()
+	root.SetArgs([]string{"approve", "--help"})
+	out := &bytes.Buffer{}
+	root.SetOut(out)
+	root.SetErr(&bytes.Buffer{})
 
 	// when
-	var found bool
-	for _, sub := range rootCmd.Commands() {
-		if sub.Name() == "approve" {
-			found = true
-			break
-		}
+	if err := root.Execute(); err != nil {
+		t.Fatalf("approve --help: %v", err)
 	}
 
 	// then
-	if !found {
-		t.Fatal("approve subcommand not found")
+	if !strings.Contains(out.String(), "Retired") {
+		t.Errorf("help should state the command is retired, got: %s", out.String())
 	}
 }
 
-func TestApproveCmd_PlanIdFlagRequired(t *testing.T) {
-	// given: initialized .pass/
-	dir := t.TempDir()
-	passDir := filepath.Join(dir, ".pass")
-	if err := os.MkdirAll(passDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	t.Chdir(dir)
-
-	rootCmd := cmd.NewRootCommand()
-	buf := new(bytes.Buffer)
-	rootCmd.SetOut(buf)
-	rootCmd.SetErr(buf)
-	rootCmd.SetArgs([]string{"approve"})
+func TestApproveCmd_ReturnsRetirementError(t *testing.T) {
+	// given: even with the legacy flag, the stub answers with the redirect
+	root := cmd.NewRootCommand()
+	root.SetArgs([]string{"approve", "--plan-id", "p-1", t.TempDir()})
+	root.SetOut(&bytes.Buffer{})
+	root.SetErr(&bytes.Buffer{})
 
 	// when
-	err := rootCmd.Execute()
+	err := root.Execute()
 
 	// then
 	if err == nil {
-		t.Fatal("expected error when --plan-id not provided, got nil")
+		t.Fatal("expected retirement error")
 	}
-	if !strings.Contains(err.Error(), "plan-id") {
-		t.Errorf("expected error to mention 'plan-id', got: %v", err)
-	}
-}
-
-func TestApproveCmd_FailsWithoutInit(t *testing.T) {
-	// given: directory without .pass/
-	dir := t.TempDir()
-	t.Chdir(dir)
-
-	rootCmd := cmd.NewRootCommand()
-	buf := new(bytes.Buffer)
-	rootCmd.SetOut(buf)
-	rootCmd.SetErr(buf)
-	rootCmd.SetArgs([]string{"approve", "--plan-id", "test-id"})
-
-	// when
-	err := rootCmd.Execute()
-
-	// then
-	if err == nil {
-		t.Fatal("expected error when .pass/ not initialized, got nil")
-	}
-	if !strings.Contains(err.Error(), "dominator init") {
-		t.Errorf("expected error to mention 'dominator init', got: %v", err)
+	if !strings.Contains(err.Error(), "retired") {
+		t.Errorf("error should state retirement, got: %v", err)
 	}
 }

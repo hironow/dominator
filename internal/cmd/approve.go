@@ -1,75 +1,30 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
-	"path/filepath"
-	"time"
+	"errors"
 
-	"github.com/hironow/dominator/internal/domain"
-	"github.com/hironow/dominator/internal/session"
 	"github.com/spf13/cobra"
 )
 
+// newApproveCommand redirects operators away from the retired
+// plan-approval flow (see newCheckCommand for the full rationale; refs
+// issue 0034).
 func newApproveCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "approve [path]",
-		Short: "Approve an execution plan",
-		Long: `Approve a previously created execution plan for load testing.
+		Short: "Retired: judge NFRs via Claude Code + mcp-k6 + /nfr-judge",
+		Long: `Retired by the jun15 MCP pivot (refs issue 0034).
 
-The --plan-id flag specifies which plan to approve. The approved plan JSON
-is output to stdout.`,
-		Example: `  # Approve a plan by ID
-  dominator approve --plan-id abc123
-
-  # Approve in a specific directory
-  dominator approve --plan-id abc123 /path/to/project`,
+Plan approval gated the retired 'dominator run' loop. The human-in-the-
+loop control it provided lives in the Claude Code session now: the human
+invokes /nfr-judge, and the session records the verdict via record_result.`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			repoRoot, err := resolveTargetDir(args)
-			if err != nil {
-				return err
-			}
-
-			err = session.ValidateStateDir(repoRoot)
-			if err != nil {
-				return err
-			}
-
-			planIDRaw, _ := cmd.Flags().GetString("plan-id") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
-			planID := domain.PlanID(planIDRaw)
-
-			logger := loggerFrom(cmd)
-			stateDir := filepath.Join(repoRoot, domain.StateDir)
-			planStore := &session.PlanStore{StateDir: stateDir}
-
-			plan, err := planStore.ApprovePlan(planID)
-			if err != nil {
-				return err
-			}
-
-			// Record event
-			eventStore := session.NewEventStore(stateDir, logger)
-			ev, evErr := domain.NewEvent(domain.EventPlanApproved, plan, time.Now())
-			if evErr == nil {
-				_, err = eventStore.Append(ev)
-				if err != nil {
-					return fmt.Errorf("append event: %w", err)
-				}
-			}
-
-			data, err := json.MarshalIndent(plan, "", "  ")
-			if err != nil {
-				return fmt.Errorf("marshal plan: %w", err)
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), string(data))
-			fmt.Fprintf(cmd.ErrOrStderr(), "  Plan %s approved\n", planID)
-			return nil
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return errors.New("dominator approve is retired (jun15 MCP pivot): plans have no consumer since 'run' was retired; judge via Claude Code + mcp-k6 + the /nfr-judge skill (see 'dominator mcp')")
 		},
 	}
-	cmd.Flags().String("plan-id", "", "Plan ID to approve (required)")
-	if err := cmd.MarkFlagRequired("plan-id"); err != nil {
-		panic(fmt.Sprintf("mark plan-id required: %v", err))
-	}
+	// --plan-id is kept registered so old invocations fail with the
+	// retirement message instead of a flag-parse error.
+	cmd.Flags().String("plan-id", "", "retired flag (plans are no longer staged)")
 	return cmd
 }

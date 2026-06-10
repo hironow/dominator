@@ -22,7 +22,7 @@ Provide an MCP server + data plane for NFR judgment: serve configured NFR thresh
 (From README)
 
 - MCP server (`dominator mcp`) exposing `dominator.ping` / `dominator.get_nfr` / `dominator.record_result`
-- Local state commands: `init`, `check`, `approve`, `insights`, `inbox`, `config`, `doctor`, `status`, `archive-prune`, `clean`, `update`, `version`
+- Local state commands: `init`, `insights`, `inbox`, `config`, `doctor`, `status`, `archive-prune`, `clean`, `update`, `version` (`check` / `approve` retired with the plan-staging flow, refs issue 0034)
 - `.pass/` persistent state directory (config, event store, judgment history)
 
 ### Out of scope (Non-goals)

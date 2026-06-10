@@ -100,8 +100,8 @@ All state mutations flow through the event store, which appends events as JSONL 
 |---|---|---|
 | `script.generated` | `generate` command (retired stub) | k6 script created from API spec (historical events) |
 | `generation.failed` | `generate` command (retired stub) | Script generation error (historical events) |
-| `plan.created` | `check` command | Execution plan created |
-| `plan.approved` | `approve` command | Plan approved for execution |
+| `plan.created` | retired `check` command | Execution plan created (legacy; kind kept registered for ledger replay) |
+| `plan.approved` | retired `approve` command | Plan approved (legacy; kind kept registered for ledger replay) |
 | `judged` | `run` command | Judgment result recorded |
 | `violation.detected` | `run` (violation) | NFR threshold exceeded |
 | `pass.confirmed` | `run` (pass) | All NFRs within thresholds |
@@ -163,7 +163,7 @@ Script: load-test.js, VUs: 10, Duration: 30s
 | `config.yaml` | `init` command | Init (only if absent) |
 | `k6-scripts/*.js` | `generate` command | Script generation |
 | `events/*.jsonl` | `FileEventStore.Append` | On each state mutation |
-| `.run/plans/*.json` | `PlanStore.SavePlan` | `check` command |
+| `.run/plans/*.json` | legacy plan files (writer retired with `check`) | retired `check` command |
 | `insights/hue.md` | `InsightWriter.RecordHue` | After judgment |
 | `insights/coefficient.md` | `InsightWriter.RecordCoefficient` | After judgment |
 | `outbox/*.md` | `DMailEmitter` | Violation or pass |
