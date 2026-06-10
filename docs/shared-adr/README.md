@@ -43,3 +43,4 @@ Each tool maintains its own copy in `docs/shared-adr/`. ADR IDs are referenced i
 | [S0030](S0030-insight-data-persistence.md) | Insight Data Persistence — supersedes S0017 | Accepted |
 | [S0031](S0031-dmail-context-extension.md) | D-Mail Context Extension — amends S0005 | Accepted |
 | [S0032](S0032-cvd-friendly-signal-color-palette.md) | CVD-Friendly Signal Color Palette | Accepted |
+| [S0045](S0045-omni-session-topology-and-project-wiring.md) | Omni-Session Topology and Project Wiring | Accepted |

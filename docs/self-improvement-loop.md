@@ -17,9 +17,9 @@ Post jun15 MCP pivot, `dominator` participates in the observable
 self-improvement loop as a data plane:
 
 1. It serves the configured NFR thresholds (`.pass/config.yaml`) over MCP
-   (`dominator.get_nfr`) to a human-initiated Claude Code session.
+   (`get_nfr`) to a human-initiated Claude Code session.
 2. The session runs k6 through mcp-k6, compares metrics against the
-   thresholds, and records the verdict via `dominator.record_result`,
+   thresholds, and records the verdict via `record_result`,
    which persists an `EventJudgmentRecorded` to the event store.
 3. It accumulates judgment insights in `.pass/insights/` — `hue.md`
    (recent judgment tendency) and `coefficient.md` (threat-level history)

@@ -7,7 +7,7 @@ Referenced from [README.md](../README.md) and [docs/README.md](README.md).
 |--------|-------------|
 | **What** | MCP server + data plane for NFR judgment: serves configured NFR thresholds and records externally judged k6 results |
 | **Why** | Keep NFR evidence in the shared event store while ensuring k6 execution and any LLM reasoning happen inside a human-initiated claude-code session |
-| **How** | `dominator mcp` serves MCP tools (`get_nfr`, `record_result`); the `/nfr-judge` skill drives mcp-k6 from the claude-code session and records the verdict through `dominator.record_result` |
+| **How** | `dominator mcp` serves MCP tools (`get_nfr`, `record_result`); the `/nfr-judge` skill drives mcp-k6 from the claude-code session and records the verdict through `record_result` |
 | **Input** | `.pass/config.yaml`, event store, MCP tool arguments, externally judged k6 result summaries |
 | **Output** | MCP tool responses and `EventJudgmentRecorded` entries in the event store |
 | **Telemetry** | OTel spans on command roots and MCP tool handlers; MCP invocation metrics support post-jun15 cost verification |
@@ -58,8 +58,8 @@ All tools (phonewave, sightjack, paintress, amadeus, dominator) maintain a What/
 Dominator no longer starts Claude or k6 from the Go CLI. The old `generate`, `run`, and `validate` commands are deprecation stubs; `check` and `approve` remain local data-plane helpers for existing k6 scripts and plan metadata.
 
 - `dominator mcp` implements the MCP lifecycle (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`) over stdio.
-- `dominator.get_nfr` reads the NFR thresholds from `.pass/config.yaml`.
-- `dominator.record_result` records a pass/fail verdict from the claude-code session as `EventJudgmentRecorded`.
+- `get_nfr` reads the NFR thresholds from `.pass/config.yaml`.
+- `record_result` records a pass/fail verdict from the claude-code session as `EventJudgmentRecorded`.
 - The `/nfr-judge` skill drives mcp-k6 and performs result comparison from the claude-code session.
 
 Ref: ADR 0003, ADR 0004, ADR 0005, `internal/session/mcp_server.go`, `plugins/dominator/skills/nfr-judge/SKILL.md`

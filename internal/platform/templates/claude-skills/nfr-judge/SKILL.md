@@ -10,8 +10,9 @@ description: >-
   interactive session so inference stays on the subscription quota
   rather than the Agent SDK credit pool that gates `claude -p` from
   2026-06-15.
-version: 0.2.0
+version: 0.3.0
 argument-hint: "(none) - fetches the NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
+disable-model-invocation: true
 allowed-tools:
   - Read
   - Edit
@@ -20,9 +21,10 @@ allowed-tools:
   - Grep
   - Glob
   - Agent
-  - mcp__dominator__dominator_ping
-  - mcp__dominator__dominator_get_nfr
-  - mcp__dominator__dominator_record_result
+  - mcp__dominator__ping
+  - mcp__dominator__get_nfr
+  - mcp__dominator__record_result
+  - mcp__dominator__dmail
   - mcp__k6__run_script
   - mcp__k6__validate_script
 ---
@@ -33,6 +35,10 @@ Human-initiated entry point. Drives the dominator MCP server's tools
 plus the external mcp-k6 server's load-test tools without ever
 invoking `claude -p`, so all inference happens inside this
 interactive Claude Code session's subscription quota.
+
+`disable-model-invocation: true` makes this skill human-invocable only
+— the model cannot auto-trigger it. That is the mechanical form of the
+jun15 invariant (LLM work fires only when a human asks).
 
 ## Execution principle: one invocation = one judgment
 
@@ -66,7 +72,7 @@ record_result.
 
 ## Workflow
 
-1. **Verify MCP wiring**. Call `mcp__dominator__dominator_ping`. The
+1. **Verify MCP wiring**. Call `mcp__dominator__ping`. The
    tool must return `pong`. If it errors, the dominator MCP server
    is not attached — abort and ask the human to relaunch claude
    with `--mcp-config`.
@@ -77,7 +83,7 @@ record_result.
    load-test target on your own.
 
 3. **Fetch the NFR thresholds**. Call
-   `mcp__dominator__dominator_get_nfr` with `{"target_id": "<id>"}`.
+   `mcp__dominator__get_nfr` with `{"target_id": "<id>"}`.
    The tool reads `.pass/config.yaml` and returns:
 
    ```json
@@ -86,7 +92,7 @@ record_result.
      "target_id": "<id>",
      "nfr": {"performance": {...}, "reliability": {...}, "scalability": {...}},
      "target": {"url": "..."},
-     "instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call dominator.record_result with verdict='pass' or 'fail'."
+     "instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call record_result with verdict='pass' or 'fail'."
    }
    ```
 
@@ -113,7 +119,7 @@ record_result.
    passes; otherwise `fail` (list the failing rows).
 
 7. **Record the verdict**. Call
-   `mcp__dominator__dominator_record_result` with
+   `mcp__dominator__record_result` with
    `{"target_id": ..., "verdict": "pass"|"fail", "summary": ...}` —
    put the failing-row digest in `summary`. The tool persists an
    `EventJudgmentRecorded` to the event store and returns
@@ -122,12 +128,18 @@ record_result.
    falls back to `persistence: "preview-only"` with `recorded: false` —
    report that explicitly; the judgment is then NOT durably recorded.)
 
-8. **Report**. End with: target id, the threshold-vs-actual table, the
-   recorded verdict + persistence mode, and what the human should do
-   next (fix and re-judge / move to the next target). Feedback D-Mail
-   to the designer/implementer is out of scope until an emission MCP
-   tool exists (refs issue 0031) — say so when a `fail` verdict would
-   normally trigger one.
+8. **Emit feedback d-mails on fail**. When the verdict is `fail`,
+   call `mcp__dominator__dmail` with
+   `{kind: "implementation-feedback"|"design-feedback"|"report",
+   name: "dom-<kind>-<target>-<ts>", description, body (the
+   threshold-vs-actual table), severity}` so the implementer/designer
+   receives the findings via phonewave. Re-sending the same name is an
+   idempotent upsert.
+
+9. **Report**. End with: target id, the threshold-vs-actual table, the
+   recorded verdict + persistence mode, feedback d-mails emitted, and
+   what the human should do next (fix and re-judge / move to the next
+   target).
 
 ## Failure paths
 
@@ -163,9 +175,9 @@ the same k6 run — one run, one verdict.
 - Run k6 directly via `bash` / `Bash` — use `mcp__k6__run_script`
   exclusively so the audit trail (= OTel `messaging.*` attrs) stays
   consistent.
-- Emit a feedback D-Mail by writing to `outbox/` directly (transactional
-  outbox bypass). A `dominator.dmail` emission tool does not exist yet
-  — tracked in refs issue 0031.
+- Emit a feedback D-Mail by writing to `outbox/` directly with the
+  Write tool (transactional outbox bypass). The `dmail` tool is the
+  canonical emission path (refs issue 0031, resolved).
 
 ## Done criteria
 
