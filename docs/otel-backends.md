@@ -9,7 +9,7 @@ Dominator supports OpenTelemetry trace export to Jaeger (local) and Weave (Weigh
 just jaeger
 
 # Run dominator with tracing enabled
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 dominator run --plan-id <id>
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 dominator status
 
 # View traces at http://localhost:16686
 # MCP endpoint at http://localhost:16687/mcp
@@ -37,7 +37,7 @@ dominator init --otel-backend=weave \
 Environment variables always take precedence over `.otel.env`:
 
 ```bash
-OTEL_EXPORTER_OTLP_ENDPOINT=http://custom:4318 dominator run --plan-id <id>
+OTEL_EXPORTER_OTLP_ENDPOINT=http://custom:4318 dominator status
 ```
 
 ## .otel.env File

@@ -41,6 +41,6 @@ The stream separation ensures correct behavior in Unix pipelines:
 
 ```bash
 dominator insights | jq '.hue'       # stdout = JSON only
-dominator run 2>/dev/null             # suppress stderr logs
+dominator doctor 2>/dev/null          # suppress stderr logs
 dominator status --output json 2>run.log  # split logs to file
 ```
