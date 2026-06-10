@@ -10,7 +10,7 @@ description: >-
   interactive session so inference stays on the subscription quota
   rather than the Agent SDK credit pool that gates `claude -p` from
   2026-06-15.
-version: 0.3.0
+version: 0.3.1
 argument-hint: "(none) - fetches the NFR target from dominator MCP, runs k6 via mcp-k6, records the verdict back to dominator"
 disable-model-invocation: true
 allowed-tools:
@@ -22,6 +22,7 @@ allowed-tools:
   - Glob
   - Agent
   - mcp__dominator__ping
+  - mcp__dominator__get_insights
   - mcp__dominator__get_nfr
   - mcp__dominator__record_result
   - mcp__dominator__dmail
@@ -82,7 +83,13 @@ record_result.
    target ids to the human, and ask them to pick one — do not pick a
    load-test target on your own.
 
-3. **Fetch the NFR thresholds**. Call
+3. **Consult the learning loop**. Call `mcp__dominator__get_insights`
+   with no arguments. Repeated `fail` verdicts on the same target in
+   `live_judgments` indicate a persistent NFR gap — scrutinize that
+   target's thresholds and prior deviations (legacy hue/coefficient
+   ledgers) before re-judging. Empty result = no history yet, proceed.
+
+4. **Fetch the NFR thresholds**. Call
    `mcp__dominator__get_nfr` with `{"target_id": "<id>"}`.
    The tool reads `.pass/config.yaml` and returns:
 
@@ -100,14 +107,14 @@ record_result.
    surface the `reason` and abort — the human must run `dominator mcp`
    from a project root with a valid NFR config.
 
-4. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
+5. **Validate the k6 script**. Call `mcp__k6__validate_script` with the
    script for the target (from `.pass/k6-scripts/`; author or fix it in
    the session if missing/stale). Do not run an invalid script.
 
-5. **Run the k6 load test**. Call `mcp__k6__run_script` with the
+6. **Run the k6 load test**. Call `mcp__k6__run_script` with the
    validated script. Capture the metrics output.
 
-6. **Judge pass/fail against thresholds**. Compare every captured
+7. **Judge pass/fail against thresholds**. Compare every captured
    metric against the `nfr` thresholds from step 3 inside this session
    — no `claude -p`. Build the comparison table for the report (one
    row per threshold):
@@ -118,7 +125,7 @@ record_result.
    The overall verdict is `pass` only when every individual threshold
    passes; otherwise `fail` (list the failing rows).
 
-7. **Record the verdict**. Call
+8. **Record the verdict**. Call
    `mcp__dominator__record_result` with
    `{"target_id": ..., "verdict": "pass"|"fail", "summary": ...}` —
    put the failing-row digest in `summary`. The tool persists an
@@ -128,7 +135,7 @@ record_result.
    falls back to `persistence: "preview-only"` with `recorded: false` —
    report that explicitly; the judgment is then NOT durably recorded.)
 
-8. **Emit feedback d-mails on fail**. When the verdict is `fail`,
+9. **Emit feedback d-mails on fail**. When the verdict is `fail`,
    call `mcp__dominator__dmail` with
    `{kind: "implementation-feedback"|"design-feedback"|"report",
    name: "dom-<kind>-<target>-<ts>", description, body (the
@@ -136,7 +143,7 @@ record_result.
    receives the findings via phonewave. Re-sending the same name is an
    idempotent upsert.
 
-9. **Report**. End with: target id, the threshold-vs-actual table, the
+10. **Report**. End with: target id, the threshold-vs-actual table, the
    recorded verdict + persistence mode, feedback d-mails emitted, and
    what the human should do next (fix and re-judge / move to the next
    target).
