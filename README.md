@@ -14,6 +14,7 @@ dominator mcp
 2. `get_nfr` — read NFR thresholds from `.pass/config.yaml`
 3. `record_result` — persist a pass/fail verdict as `EventJudgmentRecorded`
 4. `dmail` — emit a design-feedback / implementation-feedback / report D-Mail via the transactional outbox (refs issue 0031)
+5. `get_insights` — read the learning loop: live judgment summary from the event store + legacy hue/coefficient ledgers (refs issue 0034)
 
 The claude-code session runs the `/nfr-judge` skill with both Dominator and mcp-k6 attached. That session validates/runs k6 through mcp-k6, compares the result against the thresholds returned by `dominator.get_nfr`, and records the final verdict through `dominator.record_result`.
 

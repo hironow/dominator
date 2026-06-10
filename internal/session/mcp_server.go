@@ -165,7 +165,7 @@ func initializeResult() map[string]any {
 		// instructions feed Claude Code's deferred tool loading (Tool
 		// Search): only tool names + this summary are in context at
 		// startup, so it must say what the server is FOR.
-		"instructions": "dominator is the NFR-judge data plane of the tap 5-tool ecosystem: serve configured NFR thresholds (get_nfr), record pass/fail verdicts (record_result), and emit feedback d-mails through the transactional outbox (dmail). k6 execution belongs to the session via mcp-k6. Drive it from the /nfr-judge skill in a human-initiated session.",
+		"instructions": "dominator is the NFR-judge data plane of the tap 5-tool ecosystem: serve configured NFR thresholds (get_nfr), consult judgment history (get_insights), record pass/fail verdicts (record_result), and emit feedback d-mails through the transactional outbox (dmail). k6 execution belongs to the session via mcp-k6. Drive it from the /nfr-judge skill in a human-initiated session.",
 	}
 }
 
@@ -195,6 +195,8 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 		result = realRecordResult(s.emitter, call.Arguments)
 	case "dmail":
 		result = realDMail(ctx, s.passDir, call.Arguments)
+	case "get_insights":
+		result = realGetInsights(s.passDir, s.logger, call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
 		return s.respondError(msg.ID, -32601, fmt.Sprintf("unknown tool: %s", call.Name))
@@ -259,6 +261,11 @@ func toolDescriptors() []map[string]any {
 				},
 				"required": []any{"kind", "name", "description", "body"},
 			},
+		},
+		{
+			"name":        "get_insights",
+			"description": "Read the NFR judge's learning loop (refs issue 0034): a live judgment summary derived from EventJudgmentRecorded (count / fails / last verdict) plus the legacy hue.md / coefficient.md ledgers when present. Consult before judging — repeated fail verdicts on a target indicate a persistent NFR gap. Read-only and idempotent; empty state returns empty arrays.",
+			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 	}
 }
