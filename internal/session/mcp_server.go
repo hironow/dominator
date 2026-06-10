@@ -162,6 +162,10 @@ func initializeResult() map[string]any {
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
 		"serverInfo":      map[string]any{"name": "dominator", "version": "0.1.0"},
+		// instructions feed Claude Code's deferred tool loading (Tool
+		// Search): only tool names + this summary are in context at
+		// startup, so it must say what the server is FOR.
+		"instructions": "dominator is the NFR-judge data plane of the tap 5-tool ecosystem: serve configured NFR thresholds (get_nfr), record pass/fail verdicts (record_result), and emit feedback d-mails through the transactional outbox (dmail). k6 execution belongs to the session via mcp-k6. Drive it from the /nfr-judge skill in a human-initiated session.",
 	}
 }
 
@@ -189,6 +193,8 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 		result = realGetNFR(s.passDir, call.Arguments)
 	case "record_result":
 		result = realRecordResult(s.emitter, call.Arguments)
+	case "dmail":
+		result = realDMail(ctx, s.passDir, call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
 		return s.respondError(msg.ID, -32601, fmt.Sprintf("unknown tool: %s", call.Name))
@@ -235,6 +241,23 @@ func toolDescriptors() []map[string]any {
 					"summary":   map[string]any{"type": "string", "description": "human-readable summary of the run"},
 				},
 				"required": []any{"target_id", "verdict"},
+			},
+		},
+		{
+			"name":        "dmail",
+			"description": "Emit a D-Mail through the transactional outbox (refs issue 0031). Arguments map onto the D-Mail v1 schema; dominator may emit kinds: design-feedback / implementation-feedback / report. Never write outbox/ directly — this tool is the canonical atomic path (SQLite stage -> flush) that phonewave delivery depends on. Re-sending the same name is an idempotent upsert.",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"kind":        map[string]any{"type": "string", "description": "design-feedback / implementation-feedback / report"},
+					"name":        map[string]any{"type": "string", "description": "unique d-mail name (becomes <name>.md; e.g. dom-implfb-<target>-<ts>)"},
+					"description": map[string]any{"type": "string", "description": "one-line summary (required by schema v1)"},
+					"body":        map[string]any{"type": "string", "description": "markdown body (threshold-vs-actual findings)"},
+					"issues":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "related issue ids"},
+					"severity":    map[string]any{"type": "string", "description": "low / medium / high (optional)"},
+					"metadata":    map[string]any{"type": "object", "description": "string map; project_id / actor_type injected automatically"},
+				},
+				"required": []any{"kind", "name", "description", "body"},
 			},
 		},
 	}
