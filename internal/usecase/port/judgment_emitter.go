@@ -6,7 +6,7 @@ import (
 
 // JudgmentEventEmitter wraps the JudgeAggregate event production + event
 // store persistence for session-initiated judgment records (= the
-// dominator.record_result MCP tool). Emit chain:
+// record_result MCP tool). Emit chain:
 // agg.RecordJudgment() → store.Append().
 type JudgmentEventEmitter interface {
 	EmitJudgmentRecorded(targetID, verdict, summary string, now time.Time) error // nosemgrep: domain-primitives.multiple-string-params-go -- targetID/verdict/summary are semantically distinct fields of the record_result MCP payload [permanent]

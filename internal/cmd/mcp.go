@@ -17,8 +17,8 @@ import (
 // calls dominator tools from inside the human-initiated subscription
 // quota.
 //
-// Exposes dominator.ping + dominator.get_nfr (reads NFR thresholds
-// from .pass/config.yaml) + dominator.record_result (persists an
+// Exposes ping + get_nfr (reads NFR thresholds
+// from .pass/config.yaml) + record_result (persists an
 // EventJudgmentRecorded event to the .pass event store when an
 // emitter is wired).
 //
@@ -39,8 +39,8 @@ Designed for embedding in a Claude Code interactive session via
 rather than crossing into the Agent SDK credit pool that gates
 'claude -p' from 2026-06-15.
 
-Exposes dominator.ping, dominator.get_nfr (NFR thresholds read from
-.pass/config.yaml), and dominator.record_result (persists a verdict
+Exposes ping, get_nfr (NFR thresholds read from
+.pass/config.yaml), and record_result (persists a verdict
 as an EventJudgmentRecorded event to the .pass event store when an
 emitter is wired; preview-only otherwise).
 
@@ -61,7 +61,7 @@ server separately to the same Claude Code session.`,
 			logger := loggerFrom(cmd)
 			srv := session.NewMCPServer(cmd.InOrStdin(), cmd.OutOrStdout(), logger).WithPassDir(passDir)
 
-			// Wire the judgment emitter so dominator.record_result persists
+			// Wire the judgment emitter so record_result persists
 			// an EventJudgmentRecorded to the event store (refs/issues/0027
 			// Phase 4 follow-up, ADR 0005). LoadConfig falls back to
 			// DefaultConfig when config.yaml is absent — that is fine here:

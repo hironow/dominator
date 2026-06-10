@@ -18,9 +18,9 @@ import (
 // MCPServer is a stdio-based Model Context Protocol server for the
 // refs/issues/0027 jun15 MCP pivot.
 //
-// Three tools are exposed with real implementations: dominator.ping
-// (health check), dominator.get_nfr (reads NFR thresholds from
-// config.yaml), and dominator.record_result (persists an
+// Three tools are exposed with real implementations: ping
+// (health check), get_nfr (reads NFR thresholds from
+// config.yaml), and record_result (persists an
 // EventJudgmentRecorded to the event store when an emitter is wired,
 // ADR 0005).
 //
@@ -63,7 +63,7 @@ func (s *MCPServer) WithPassDir(passDir string) *MCPServer {
 	return s
 }
 
-// WithEmitter injects a JudgmentEventEmitter so dominator.record_result
+// WithEmitter injects a JudgmentEventEmitter so record_result
 // persists an EventJudgmentRecorded to the event store. When nil (the
 // default), record_result stays preview-only. The emitter is constructed
 // in the cmd composition root (= paintress.WithEmitter symmetric); the
@@ -183,11 +183,11 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 	status := "ok"
 	var result map[string]any
 	switch call.Name {
-	case "dominator.ping":
+	case "ping":
 		result = textResult("pong")
-	case "dominator.get_nfr":
+	case "get_nfr":
 		result = realGetNFR(s.passDir, call.Arguments)
-	case "dominator.record_result":
+	case "record_result":
 		result = realRecordResult(s.emitter, call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
@@ -209,12 +209,12 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 func toolDescriptors() []map[string]any {
 	return []map[string]any{
 		{
-			"name":        "dominator.ping",
+			"name":        "ping",
 			"description": "Health check. Returns 'pong'.",
 			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
-			"name":        "dominator.get_nfr",
+			"name":        "get_nfr",
 			"description": "Return the NFR thresholds (latency / error rate / success rate / RPS) for the given target, read from the .pass/config.yaml NFR config.",
 			"inputSchema": map[string]any{
 				"type": "object",
@@ -225,7 +225,7 @@ func toolDescriptors() []map[string]any {
 			},
 		},
 		{
-			"name":        "dominator.record_result",
+			"name":        "record_result",
 			"description": "Persist a k6 run result (verdict 'pass'/'fail' + summary) against the given NFR target as an EventJudgmentRecorded event (persistence='event-store' when an emitter is wired; preview-only otherwise).",
 			"inputSchema": map[string]any{
 				"type": "object",
@@ -298,7 +298,7 @@ func realGetNFR(passDir string, args json.RawMessage) map[string]any {
 		"target": map[string]any{
 			"url": cfg.Target.URL,
 		},
-		"instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call dominator.record_result with verdict='pass' or 'fail'.",
+		"instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call record_result with verdict='pass' or 'fail'.",
 	})
 }
 
