@@ -82,7 +82,7 @@ func Status(ctx context.Context, passDir string, logger domain.Logger) domain.St
 				lastVerdict = domain.VerdictViolation
 			}
 		case domain.EventJudgmentRecorded:
-			// Session-initiated judgment record (= dominator.record_result
+			// Session-initiated judgment record (= record_result
 			// MCP tool). Carries the normalised Verdict but no k6 metrics.
 			report.JudgeCount++
 			var data domain.JudgmentRecordedData

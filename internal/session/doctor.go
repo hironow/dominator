@@ -105,7 +105,7 @@ func CheckConfig(configPath string) domain.DoctorCheck {
 // interactive session (= `claude --mcp-config '{"k6":{...}}'`).
 // Doctor returns Skip with a pivot reason; a follow-up commit will
 // replace this with a probe against the dominator MCP server's
-// `dominator.ping` plus optional mcp-k6 health hint via the session's
+// `ping` plus optional mcp-k6 health hint via the session's
 // own tool listing.
 func CheckMCPK6(_, _ string, _ domain.Logger) domain.DoctorCheck {
 	return domain.DoctorCheck{

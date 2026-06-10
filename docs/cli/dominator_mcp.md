@@ -12,8 +12,8 @@ Designed for embedding in a Claude Code interactive session via
 rather than crossing into the Agent SDK credit pool that gates
 'claude -p' from 2026-06-15.
 
-Exposes dominator.ping, dominator.get_nfr (NFR thresholds read from
-.pass/config.yaml), and dominator.record_result (persists a verdict
+Exposes ping, get_nfr (NFR thresholds read from
+.pass/config.yaml), and record_result (persists a verdict
 as an EventJudgmentRecorded event to the .pass event store when an
 emitter is wired; preview-only otherwise).
 

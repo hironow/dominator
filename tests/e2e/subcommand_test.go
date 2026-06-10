@@ -261,9 +261,9 @@ func TestE2E_MCPServerToolsList(t *testing.T) {
 	}
 
 	expectedTools := map[string]bool{
-		"dominator.ping":          false,
-		"dominator.get_nfr":       false,
-		"dominator.record_result": false,
+		"ping":          false,
+		"get_nfr":       false,
+		"record_result": false,
 	}
 
 	for _, tool := range resp.Result.Tools {

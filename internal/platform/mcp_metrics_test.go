@@ -20,9 +20,9 @@ func TestRecordMCPInvocation_IncrementsCounterAndHistogram(t *testing.T) {
 	ctx := context.Background()
 
 	// when
-	platform.RecordMCPInvocation(ctx, "dominator.ping", "ok", 5*time.Millisecond)
-	platform.RecordMCPInvocation(ctx, "dominator.get_nfr", "deprecated", 12*time.Millisecond)
-	platform.RecordMCPInvocation(ctx, "dominator.ping", "ok", 3*time.Millisecond)
+	platform.RecordMCPInvocation(ctx, "ping", "ok", 5*time.Millisecond)
+	platform.RecordMCPInvocation(ctx, "get_nfr", "deprecated", 12*time.Millisecond)
+	platform.RecordMCPInvocation(ctx, "ping", "ok", 3*time.Millisecond)
 
 	// then
 	var rm metricdata.ResourceMetrics
@@ -47,7 +47,7 @@ func TestRecordMCPInvocation_AttributesIncludeToolNameAndStatus(t *testing.T) {
 	ctx := context.Background()
 
 	// when
-	platform.RecordMCPInvocation(ctx, "dominator.record_result", "error", 2*time.Millisecond)
+	platform.RecordMCPInvocation(ctx, "record_result", "error", 2*time.Millisecond)
 
 	// then
 	var rm metricdata.ResourceMetrics
@@ -63,7 +63,7 @@ func TestRecordMCPInvocation_AttributesIncludeToolNameAndStatus(t *testing.T) {
 			sum := m.Data.(metricdata.Sum[int64])
 			for _, dp := range sum.DataPoints {
 				for _, attr := range dp.Attributes.ToSlice() {
-					if string(attr.Key) == "tool.name" && attr.Value.AsString() == "dominator.record_result" {
+					if string(attr.Key) == "tool.name" && attr.Value.AsString() == "record_result" {
 						foundTool = true
 					}
 					if string(attr.Key) == "result.status" && attr.Value.AsString() == "error" {
@@ -74,7 +74,7 @@ func TestRecordMCPInvocation_AttributesIncludeToolNameAndStatus(t *testing.T) {
 		}
 	}
 	if !foundTool {
-		t.Error("expected tool.name=dominator.record_result attribute on metric data point")
+		t.Error("expected tool.name=record_result attribute on metric data point")
 	}
 	if !foundStatus {
 		t.Error("expected result.status=error attribute on metric data point")

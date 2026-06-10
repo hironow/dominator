@@ -20,7 +20,7 @@ func NewJudgeAggregate(cfg Config) *JudgeAggregate {
 func (j *JudgeAggregate) Config() Config { return j.config }
 
 // RecordJudgment produces an EventJudgmentRecorded for a session-initiated
-// judgment (= the dominator.record_result MCP tool). The session judged
+// judgment (= the record_result MCP tool). The session judged
 // externally via mcp-k6 and reports only the verdict + summary, so this
 // method does not consult the aggregate's NFR config. The verdict string
 // from the MCP call ("pass" | "fail") is normalised to a domain.Verdict.

@@ -53,3 +53,8 @@
 | # | Decision |
 |---|----------|
 | [0001](0001-k6-load-testing.md) | k6 Load Testing Engine |
+| [0002](0002-mcp-k6-integration.md) | mcp-k6 Integration via Claude Code |
+| [0003](0003-mcp-pivot.md) | MCP pivot: claude code session owns LLM, dominator Go CLI is MCP server data plane |
+| [0004](0004-mcp-pivot-k6-adapter-stub.md) | MCP pivot K6 adapter stub: extend enforcement to K6MCPAdapter |
+| [0005](0005-record-result-event-store-wiring.md) | record_result event store wiring (Phase 4 follow-up) |
+| [0006](0006-mcp-write-tools-and-project-wiring.md) | MCP dmail emission and project wiring |

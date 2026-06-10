@@ -59,6 +59,21 @@ the --otel-backend flag. The generated .otel.env file is written into
 			}
 			fmt.Fprintf(cmd.ErrOrStderr(), "  Initialized %s\n", passRoot)
 
+			// Claude Code project wiring (refs issue 0032 D5/C4/C5):
+			// materialize /nfr-judge into .claude/skills/ and upsert the
+			// project-root .mcp.json (merge-aware — sibling tools' entries
+			// survive) so a bare `claude` session in this project is fully
+			// wired. dominator has no mcp-config command; init owns both.
+			if err := session.InstallClaudeSkills(repoRoot, platform.ClaudeSkillsFS, logger); err != nil {
+				return fmt.Errorf("install claude skills: %w", err)
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "  Installed .claude/skills/nfr-judge/\n")
+			rootCfg, rootErr := session.UpsertRootMCPConfig(repoRoot)
+			if rootErr != nil {
+				return fmt.Errorf("upsert root .mcp.json: %w", rootErr)
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "  Upserted %s (project-root, merge-aware)\n", rootCfg)
+
 			otelBackend, _ := cmd.Flags().GetString("otel-backend") // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]
 			if otelBackend != "" {
 				otelEntity, _ := cmd.Flags().GetString("otel-entity")   // nosemgrep: error-handling.ignored-error-go,error-handling.ignored-error-short-go -- cobra flag registered statically; GetString cannot fail at runtime [permanent]

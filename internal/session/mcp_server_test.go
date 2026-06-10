@@ -65,9 +65,9 @@ func TestMCPServer_ListsAllPhase2cTools(t *testing.T) {
 		t.Fatalf("tools list missing: %v", result["tools"])
 	}
 	want := map[string]bool{
-		"dominator.ping":          false,
-		"dominator.get_nfr":       false,
-		"dominator.record_result": false,
+		"ping":          false,
+		"get_nfr":       false,
+		"record_result": false,
 	}
 	for _, t0 := range tools {
 		entry, _ := t0.(map[string]any)
@@ -84,7 +84,7 @@ func TestMCPServer_ListsAllPhase2cTools(t *testing.T) {
 
 func TestMCPServer_CallsPingTool(t *testing.T) {
 	// given
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"dominator.ping","arguments":{}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ping","arguments":{}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -114,7 +114,7 @@ func TestMCPServer_CallsPingTool(t *testing.T) {
 
 func TestMCPServer_RejectsUnknownTool(t *testing.T) {
 	// given
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"dominator.does_not_exist","arguments":{}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"does_not_exist","arguments":{}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -139,7 +139,7 @@ func TestMCPServer_RejectsUnknownTool(t *testing.T) {
 
 func TestMCPServer_GetNFR_UninitializedPassDir(t *testing.T) {
 	// given: NewMCPServer without WithPassDir → uninitialized.
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"dominator.get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -177,7 +177,7 @@ load:
 		t.Fatalf("write config: %v", err)
 	}
 
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"dominator.get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"get_nfr","arguments":{"target_id":"api-latency-p95"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil).WithPassDir(passDir)
 
@@ -203,7 +203,7 @@ load:
 
 func TestMCPServer_RecordResult_RealImpl_PreviewOnly(t *testing.T) {
 	// given
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api-latency-p95","verdict":"pass","summary":"all checks green"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"record_result","arguments":{"target_id":"api-latency-p95","verdict":"pass","summary":"all checks green"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -231,7 +231,7 @@ func TestMCPServer_RecordResult_RealImpl_PreviewOnly(t *testing.T) {
 func TestMCPServer_RecordResult_EmitterWired_PersistsEventStore(t *testing.T) {
 	// given
 	rec := &recordingJudgmentEmitter{}
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api-latency-p95","verdict":"fail","summary":"p95 exceeded"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"record_result","arguments":{"target_id":"api-latency-p95","verdict":"fail","summary":"p95 exceeded"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil).WithEmitter(rec)
 
@@ -259,7 +259,7 @@ func TestMCPServer_RecordResult_EmitterWired_PersistsEventStore(t *testing.T) {
 func TestMCPServer_RecordResult_EmitterWired_RejectsInvalidWithoutEmit(t *testing.T) {
 	// given: invalid verdict must NOT reach the emitter
 	rec := &recordingJudgmentEmitter{}
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil).WithEmitter(rec)
 
@@ -280,7 +280,7 @@ func TestMCPServer_RecordResult_EmitterWired_RejectsInvalidWithoutEmit(t *testin
 
 func TestMCPServer_RecordResult_RealImpl_RejectsMissingFields(t *testing.T) {
 	// given: missing verdict
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"dominator.record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"record_result","arguments":{"target_id":"api","verdict":"unknown"}}}` + "\n")
 	var out bytes.Buffer
 	srv := session.NewMCPServer(in, &out, nil)
 
@@ -366,6 +366,7 @@ func TestMCPServer_Initialize_Handshake(t *testing.T) {
 		Result struct {
 			ProtocolVersion string                     `json:"protocolVersion"`
 			Capabilities    map[string]json.RawMessage `json:"capabilities"`
+			Instructions    string                     `json:"instructions"`
 			ServerInfo      struct {
 				Name string `json:"name"`
 			} `json:"serverInfo"`
@@ -382,6 +383,9 @@ func TestMCPServer_Initialize_Handshake(t *testing.T) {
 	}
 	if resp.Result.ServerInfo.Name != "dominator" {
 		t.Errorf("serverInfo.name = %q, want dominator", resp.Result.ServerInfo.Name)
+	}
+	if !strings.Contains(resp.Result.Instructions, "NFR-judge") {
+		t.Errorf("instructions = %q, want a one-paragraph NFR-judge role summary", resp.Result.Instructions)
 	}
 }
 

@@ -18,9 +18,9 @@ import (
 // MCPServer is a stdio-based Model Context Protocol server for the
 // refs/issues/0027 jun15 MCP pivot.
 //
-// Three tools are exposed with real implementations: dominator.ping
-// (health check), dominator.get_nfr (reads NFR thresholds from
-// config.yaml), and dominator.record_result (persists an
+// Three tools are exposed with real implementations: ping
+// (health check), get_nfr (reads NFR thresholds from
+// config.yaml), and record_result (persists an
 // EventJudgmentRecorded to the event store when an emitter is wired,
 // ADR 0005).
 //
@@ -63,7 +63,7 @@ func (s *MCPServer) WithPassDir(passDir string) *MCPServer {
 	return s
 }
 
-// WithEmitter injects a JudgmentEventEmitter so dominator.record_result
+// WithEmitter injects a JudgmentEventEmitter so record_result
 // persists an EventJudgmentRecorded to the event store. When nil (the
 // default), record_result stays preview-only. The emitter is constructed
 // in the cmd composition root (= paintress.WithEmitter symmetric); the
@@ -162,6 +162,10 @@ func initializeResult() map[string]any {
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
 		"serverInfo":      map[string]any{"name": "dominator", "version": "0.1.0"},
+		// instructions feed Claude Code's deferred tool loading (Tool
+		// Search): only tool names + this summary are in context at
+		// startup, so it must say what the server is FOR.
+		"instructions": "dominator is the NFR-judge data plane of the tap 5-tool ecosystem: serve configured NFR thresholds (get_nfr), record pass/fail verdicts (record_result), and emit feedback d-mails through the transactional outbox (dmail). k6 execution belongs to the session via mcp-k6. Drive it from the /nfr-judge skill in a human-initiated session.",
 	}
 }
 
@@ -183,12 +187,14 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 	status := "ok"
 	var result map[string]any
 	switch call.Name {
-	case "dominator.ping":
+	case "ping":
 		result = textResult("pong")
-	case "dominator.get_nfr":
+	case "get_nfr":
 		result = realGetNFR(s.passDir, call.Arguments)
-	case "dominator.record_result":
+	case "record_result":
 		result = realRecordResult(s.emitter, call.Arguments)
+	case "dmail":
+		result = realDMail(ctx, s.passDir, call.Arguments)
 	default:
 		platform.RecordMCPInvocation(ctx, call.Name, "error", time.Since(start))
 		return s.respondError(msg.ID, -32601, fmt.Sprintf("unknown tool: %s", call.Name))
@@ -209,12 +215,12 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, msg jsonrpcMessage) err
 func toolDescriptors() []map[string]any {
 	return []map[string]any{
 		{
-			"name":        "dominator.ping",
+			"name":        "ping",
 			"description": "Health check. Returns 'pong'.",
 			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
-			"name":        "dominator.get_nfr",
+			"name":        "get_nfr",
 			"description": "Return the NFR thresholds (latency / error rate / success rate / RPS) for the given target, read from the .pass/config.yaml NFR config.",
 			"inputSchema": map[string]any{
 				"type": "object",
@@ -225,7 +231,7 @@ func toolDescriptors() []map[string]any {
 			},
 		},
 		{
-			"name":        "dominator.record_result",
+			"name":        "record_result",
 			"description": "Persist a k6 run result (verdict 'pass'/'fail' + summary) against the given NFR target as an EventJudgmentRecorded event (persistence='event-store' when an emitter is wired; preview-only otherwise).",
 			"inputSchema": map[string]any{
 				"type": "object",
@@ -235,6 +241,23 @@ func toolDescriptors() []map[string]any {
 					"summary":   map[string]any{"type": "string", "description": "human-readable summary of the run"},
 				},
 				"required": []any{"target_id", "verdict"},
+			},
+		},
+		{
+			"name":        "dmail",
+			"description": "Emit a D-Mail through the transactional outbox (refs issue 0031). Arguments map onto the D-Mail v1 schema; dominator may emit kinds: design-feedback / implementation-feedback / report. Never write outbox/ directly — this tool is the canonical atomic path (SQLite stage -> flush) that phonewave delivery depends on. Re-sending the same name is an idempotent upsert.",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"kind":        map[string]any{"type": "string", "description": "design-feedback / implementation-feedback / report"},
+					"name":        map[string]any{"type": "string", "description": "unique d-mail name (becomes <name>.md; e.g. dom-implfb-<target>-<ts>)"},
+					"description": map[string]any{"type": "string", "description": "one-line summary (required by schema v1)"},
+					"body":        map[string]any{"type": "string", "description": "markdown body (threshold-vs-actual findings)"},
+					"issues":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "related issue ids"},
+					"severity":    map[string]any{"type": "string", "description": "low / medium / high (optional)"},
+					"metadata":    map[string]any{"type": "object", "description": "string map; project_id / actor_type injected automatically"},
+				},
+				"required": []any{"kind", "name", "description", "body"},
 			},
 		},
 	}
@@ -298,7 +321,7 @@ func realGetNFR(passDir string, args json.RawMessage) map[string]any {
 		"target": map[string]any{
 			"url": cfg.Target.URL,
 		},
-		"instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call dominator.record_result with verdict='pass' or 'fail'.",
+		"instruction": "Run k6 via mcp-k6, compare results against these thresholds, then call record_result with verdict='pass' or 'fail'.",
 	})
 }
 

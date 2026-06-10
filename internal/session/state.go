@@ -29,16 +29,52 @@ func InitPassDir(root string, _ domain.Logger) error {
 		}
 	}
 
-	// Create skills directories
-	skillNames := []string{"dmail-sendable", "dmail-readable"}
-	for _, name := range skillNames {
+	// Real D-Mail routing manifests (refs issue 0031): phonewave derives
+	// routes from metadata.produces / metadata.consumes, so placeholder
+	// stubs meant the NFR judge had no delivery routes. Content-compare
+	// update keeps re-init idempotent and upgrades stale stubs.
+	manifests := map[string]string{
+		"dmail-sendable": `---
+name: dmail-sendable
+description: Produces NFR judgment feedback D-Mails to outbox/ for phonewave delivery.
+license: Apache-2.0
+metadata:
+  dmail-schema-version: "1"
+  produces:
+    - kind: design-feedback
+      description: NFR thresholds missing or design-level NFR violation (to the designer)
+    - kind: implementation-feedback
+      description: NFR violation detected by a load test (to the implementer)
+    - kind: report
+      description: NFR judgment context for the verifier
+---
+
+D-Mail send capability for dominator.
+`,
+		"dmail-readable": `---
+name: dmail-readable
+description: Consumes D-Mail messages from inbox/ delivered by phonewave.
+license: Apache-2.0
+metadata:
+  dmail-schema-version: "1"
+  consumes:
+    - kind: implementation-feedback
+      description: implementation changes that may require re-judging NFR targets
+    - kind: convergence
+      description: convergence alerts that warrant an NFR re-check
+---
+
+D-Mail read capability for dominator.
+`,
+	}
+	for name, content := range manifests {
 		destDir := filepath.Join(root, "skills", name)
 		if err := os.MkdirAll(destDir, 0o755); err != nil {
 			return err
 		}
 		skillPath := filepath.Join(destDir, "SKILL.md")
-		if _, err := os.Stat(skillPath); errors.Is(err, fs.ErrNotExist) {
-			content := "# " + name + "\n\nSkill template for dominator.\n"
+		existing, readErr := os.ReadFile(skillPath)
+		if readErr != nil || string(existing) != content {
 			if writeErr := os.WriteFile(skillPath, []byte(content), 0o644); writeErr != nil {
 				return writeErr
 			}

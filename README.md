@@ -10,9 +10,10 @@ dominator mcp
 
 `dominator mcp` starts the MCP server. Its tools expose:
 
-1. `dominator.ping` — health check
-2. `dominator.get_nfr` — read NFR thresholds from `.pass/config.yaml`
-3. `dominator.record_result` — persist a pass/fail verdict as `EventJudgmentRecorded`
+1. `ping` — health check
+2. `get_nfr` — read NFR thresholds from `.pass/config.yaml`
+3. `record_result` — persist a pass/fail verdict as `EventJudgmentRecorded`
+4. `dmail` — emit a design-feedback / implementation-feedback / report D-Mail via the transactional outbox (refs issue 0031)
 
 The claude-code session runs the `/nfr-judge` skill with both Dominator and mcp-k6 attached. That session validates/runs k6 through mcp-k6, compares the result against the thresholds returned by `dominator.get_nfr`, and records the final verdict through `dominator.record_result`.
 
