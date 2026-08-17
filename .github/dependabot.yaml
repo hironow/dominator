@@ -1,0 +1,19 @@
+# Dependabot config for dominator.
+#
+# Supply-chain cooldown (org standard): wait 7 days before adopting newly
+# published versions, so a compromised release is caught by the ecosystem
+# before it can reach this repo.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
