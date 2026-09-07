@@ -3,17 +3,64 @@
 # Supply-chain cooldown (org standard): wait 7 days before adopting newly
 # published versions, so a compromised release is caught by the ecosystem
 # before it can reach this repo.
+#
+# Grouping: this repo pulls in nine go.opentelemetry.io modules that are
+# released together and share a version. Ungrouped, each one arrives as its own
+# PR, and merging any of them leaves the rest with a conflicting go.mod/go.sum —
+# which is exactly what happened to #100-#104 (five otel PRs; two went DIRTY on
+# the first merge and had to be rebased). Group the module families that move in
+# lockstep so they land as one PR. Mirrors hironow/runops-gateway.
 version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
     cooldown:
       default-days: 7
+    groups:
+      otel:
+        patterns:
+          - "go.opentelemetry.io/*"
+      grpc-protobuf:
+        patterns:
+          - "google.golang.org/*"
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
+      # testcontainers drags the moby/docker/containerd/opencontainers stack
+      # along with it; they only resolve cleanly as a set.
+      containers:
+        patterns:
+          - "github.com/testcontainers/*"
+          - "github.com/moby/*"
+          - "github.com/docker/*"
+          - "github.com/containerd/*"
+          - "github.com/opencontainers/*"
+          - "github.com/distribution/*"
+      gomod-rest:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "go.opentelemetry.io/*"
+          - "google.golang.org/*"
+          - "golang.org/x/*"
+          - "github.com/testcontainers/*"
+          - "github.com/moby/*"
+          - "github.com/docker/*"
+          - "github.com/containerd/*"
+          - "github.com/opencontainers/*"
+          - "github.com/distribution/*"
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
     cooldown:
       default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
