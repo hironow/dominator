@@ -91,6 +91,10 @@ vet:
 lint-go:
     CGO_ENABLED=0 go tool -modfile=tools/go.mod golangci-lint run ./...
 
+# Update only the lint tool and its required dependencies
+update-lint-go version="v2.14.0":
+    go get -modfile=tools/go.mod github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{version}}
+
 # Install semgrep from official PyPI with uv
 install-semgrep:
     uv tool install semgrep
