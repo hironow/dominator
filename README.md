@@ -320,7 +320,7 @@ Linear Issues ---------> Git Repository -----------> .gate/              -> .pas
 
 ## Prerequisites
 
-- Go 1.27.2+
+- Go 1.27.3+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - mcp-k6 or an equivalent k6 MCP server attached to the claude-code session
 - [Docker](https://www.docker.com/) (optional, for Jaeger tracing)
