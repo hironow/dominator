@@ -9,7 +9,7 @@ Inspired by PSYCHO-PASS Dominator.
 - **Module**: `github.com/hironow/dominator`
 - **State dir**: `.pass/`
 - **License**: Apache 2.0
-- **Go**: 1.27.2
+- **Go**: 1.27.3
 
 ## Architecture
 
