@@ -11,56 +11,33 @@
 # the first merge and had to be rebased). Group the module families that move in
 # lockstep so they land as one PR. Mirrors hironow/runops-gateway.
 version: 2
+
+# One Dependabot pull request per week for the whole repo (owner ruling
+# 2026-09-14): every ecosystem below joins the `weekly` group, whose schedule is
+# this repo's slot on a weeknight JST (hub `just dependabot-slot <repo>`) — one CI
+# run on the runner pool per repo per week instead of one per ecosystem, and no
+# org-wide Monday burst. The per-ecosystem cooldown and labels are unchanged;
+# commit-message and open-pull-requests-limit live on the group (Dependabot
+# refuses them on the entries).
+multi-ecosystem-groups:
+  weekly:
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "18:36"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+
 updates:
   - package-ecosystem: gomod
+    patterns: ["*"]
+    multi-ecosystem-group: "weekly"
     directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
     cooldown:
       default-days: 7
-    groups:
-      otel:
-        patterns:
-          - "go.opentelemetry.io/*"
-      grpc-protobuf:
-        patterns:
-          - "google.golang.org/*"
-      golang-x:
-        patterns:
-          - "golang.org/x/*"
-      # testcontainers drags the moby/docker/containerd/opencontainers stack
-      # along with it; they only resolve cleanly as a set.
-      containers:
-        patterns:
-          - "github.com/testcontainers/*"
-          - "github.com/moby/*"
-          - "github.com/docker/*"
-          - "github.com/containerd/*"
-          - "github.com/opencontainers/*"
-          - "github.com/distribution/*"
-      gomod-rest:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "go.opentelemetry.io/*"
-          - "google.golang.org/*"
-          - "golang.org/x/*"
-          - "github.com/testcontainers/*"
-          - "github.com/moby/*"
-          - "github.com/docker/*"
-          - "github.com/containerd/*"
-          - "github.com/opencontainers/*"
-          - "github.com/distribution/*"
-
   - package-ecosystem: github-actions
+    patterns: ["*"]
+    multi-ecosystem-group: "weekly"
     directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
     cooldown:
       default-days: 7
-    groups:
-      github-actions:
-        patterns:
-          - "*"
